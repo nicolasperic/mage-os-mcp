@@ -112,6 +112,71 @@ export const VIEW_CART_QUERY = gql`
   ${CART_FIELDS}
 `;
 
+export const GENERATE_TOKEN_MUTATION = gql`
+  mutation GenerateCustomerToken($email: String!, $password: String!) {
+    generateCustomerToken(email: $email, password: $password) {
+      token
+    }
+  }
+`;
+
+export const GET_CUSTOMER_QUERY = gql`
+  query GetCustomer {
+    customer {
+      firstname
+      lastname
+      email
+      addresses {
+        firstname
+        lastname
+        street
+        city
+        region {
+          region
+        }
+        postcode
+        country_code
+        telephone
+        default_shipping
+        default_billing
+      }
+    }
+  }
+`;
+
+export const GET_ORDERS_QUERY = gql`
+  query GetOrders($filter: CustomerOrdersFilterInput, $pageSize: Int!) {
+    customer {
+      orders(filter: $filter, pageSize: $pageSize) {
+        total_count
+        items {
+          number
+          order_date
+          status
+          total {
+            grand_total {
+              value
+              currency
+            }
+          }
+          items {
+            product_name
+            product_sku
+            quantity_ordered
+          }
+          shipments {
+            tracking {
+              carrier
+              title
+              number
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export const BROWSE_CATEGORIES_QUERY = gql`
   query BrowseCategories {
     categoryList {

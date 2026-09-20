@@ -20,6 +20,9 @@ import {
 } from "./tools/createGuestCart.js";
 import { addToCart, addToCartSchema } from "./tools/addToCart.js";
 import { viewCart, viewCartSchema } from "./tools/viewCart.js";
+import { login, loginSchema } from "./tools/login.js";
+import { getCustomer, getCustomerSchema } from "./tools/getCustomer.js";
+import { getOrderStatus, getOrderStatusSchema } from "./tools/getOrderStatus.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -171,6 +174,61 @@ async function main() {
     },
     async (args) => {
       const result = await viewCart(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "login",
+    {
+      title: "Log in (customer)",
+      description:
+        "Authenticate a customer with email and password. Returns a session_id " +
+        "to use with get_customer and get_order_status. The credential is stored " +
+        "server-side and never returned. Returns success:false with a reason if " +
+        "the credentials are wrong.",
+      inputSchema: loginSchema,
+    },
+    async (args) => {
+      const result = await login(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_customer",
+    {
+      title: "Get customer profile",
+      description:
+        "Get the logged-in customer's profile (name, email, saved addresses) " +
+        "using a session_id from login.",
+      inputSchema: getCustomerSchema,
+    },
+    async (args) => {
+      const result = await getCustomer(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_order_status",
+    {
+      title: "Get order status",
+      description:
+        "Look up the logged-in customer's orders (status, date, totals, line " +
+        "items, tracking) using a session_id from login. Optionally pass an " +
+        "order_number to fetch a single order; otherwise the most recent orders " +
+        "are returned.",
+      inputSchema: getOrderStatusSchema,
+    },
+    async (args) => {
+      const result = await getOrderStatus(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

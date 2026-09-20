@@ -27,10 +27,15 @@ Early v1. Working tools:
 | `create_guest_cart` | Start an anonymous shopping cart → returns a `cart_id` | GraphQL |
 | `add_to_cart` | Add products (SKU + quantity) to a guest cart; per-item errors surfaced | GraphQL |
 | `view_cart` | View a guest cart's line items and totals by `cart_id` | GraphQL |
+| `login` | Authenticate a customer (email + password) → returns a `session_id` | GraphQL |
+| `get_customer` | Logged-in customer's profile & saved addresses (by `session_id`) | GraphQL |
+| `get_order_status` | Logged-in customer's orders — status, totals, items, tracking | GraphQL |
 
-Planned next: authenticated `get_order_status` and `get_customer` (via GraphQL customer token), then checkout / place order. B2B is intentionally out of scope for now.
+Planned next: checkout / place order. B2B is intentionally out of scope for now.
 
 > **Note on carts:** the cart tools use Magento's **guest cart** mutations (no login required). `add_to_cart` currently targets **simple products** by SKU; configurable/bundle products (which need selected options) are reported back in `user_errors` and are a planned enhancement.
+
+> **Note on authentication:** `login` exchanges credentials for a Magento customer token via `generateCustomerToken`. The **token is stored server-side (in memory) and never returned** to the client — tools take an opaque `session_id` instead, so the raw credential stays out of the model's context. Sessions live for the server process lifetime; if it restarts, log in again.
 
 ## Requirements
 
