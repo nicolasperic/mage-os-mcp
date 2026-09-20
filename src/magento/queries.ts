@@ -45,6 +45,72 @@ export const SEARCH_PRODUCTS_QUERY = gql`
   }
 `;
 
+export const BROWSE_CATEGORIES_QUERY = gql`
+  query BrowseCategories {
+    categoryList {
+      uid
+      name
+      level
+      product_count
+      url_path
+      children {
+        uid
+        name
+        level
+        product_count
+        url_path
+        include_in_menu
+        children {
+          uid
+          name
+          level
+          product_count
+          url_path
+        }
+      }
+    }
+  }
+`;
+
+export const GET_CATEGORY_PRODUCTS_QUERY = gql`
+  query GetCategoryProducts(
+    $uid: String!
+    $pageSize: Int!
+    $currentPage: Int!
+    $sort: ProductAttributeSortInput
+  ) {
+    products(
+      filter: { category_uid: { eq: $uid } }
+      pageSize: $pageSize
+      currentPage: $currentPage
+      sort: $sort
+    ) {
+      total_count
+      page_info {
+        current_page
+        total_pages
+      }
+      items {
+        sku
+        name
+        stock_status
+        url_key
+        small_image {
+          url
+        }
+        price_range {
+          minimum_price {
+            final_price {
+              value
+              currency
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export const CHECK_STOCK_QUERY = gql`
   query CheckStock($skus: [String!]!) {
     products(filter: { sku: { in: $skus } }, pageSize: 100) {

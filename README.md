@@ -22,8 +22,10 @@ Early v1. Working tools:
 | `search_products` | Free-text catalog search → SKU, name, price, stock, image | GraphQL |
 | `get_product` | Full product detail by SKU → description, pricing, discounts, stock, categories, media | GraphQL |
 | `check_stock` | Batch availability check for up to 100 SKUs → in-stock flag + low-stock qty | GraphQL |
+| `browse_categories` | Store category tree (departments + subcategories) with product counts | GraphQL |
+| `get_category_products` | List products in a category by `uid`, with pagination & sorting | GraphQL |
 
-Planned next: `browse_categories` / `get_category_products`, then authenticated `get_order_status` and `get_customer` (via GraphQL customer token). B2B is intentionally out of scope for now.
+Planned next: guest cart flow (`create_guest_cart`, `add_to_cart`, `view_cart`), then authenticated `get_order_status` and `get_customer` (via GraphQL customer token). B2B is intentionally out of scope for now.
 
 ## Requirements
 

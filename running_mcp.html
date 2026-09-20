@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- This file was created with the aha Ansi HTML Adapter. https://github.com/theZiz/aha -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="application/xml+xhtml; charset=UTF-8"/>
+<title>stdin</title>
+</head>
+<body>
+<pre>
+  How to drive the server yourself
+
+  You've got two good paths. For &quot;let me poke at it,&quot; the MCP Inspector is the fastest; for &quot;let me actually chat-shop,&quot; wiring it into Claude Code is the way.
+
+  Option A — Claude Code CLI (natural-language shopping)
+
+  From any directory, register the server once:
+
+  claude mcp add mage-os \
+    --env MAGENTO_BASE_URL=https://app.mage-os.test \
+    --env MAGENTO_INSECURE_TLS=true \
+    --env MAGENTO_STORE_CODE=default \
+    -- node /Users/nico/development/mage-os-mcp/dist/index.js
+
+  Notes:
+  - Pass env via --env (as above) rather than relying on the .env file. When Claude spawns the server, its working directory isn't the project folder, so dotenv wouldn't find .env. The --env flags are the reliable way.
+  - Add --scope user if you want it available in every project, not just the one you're in: claude mcp add mage-os --scope user --env ... -- node ...
+  - It runs the built dist/index.js, so run npm run build after any code change (or point it at npx tsx /Users/.../src/index.js to skip the build step during dev).
+
+  Then, in a new claude session:
+  - claude mcp list → should show mage-os connected
+  - /mcp inside the session → lists the server and its 3 tools
+  - Just ask naturally: &quot;Search the store for yoga products under $20 and tell me if the cheapest is in stock.&quot; Claude will call search_products then check_stock on its own.
+
+  Option B — MCP Inspector (raw tool testing, no LLM)
+
+  Best when you want to call a tool with exact args and see the raw JSON:
+
+  cd /Users/nico/development/mage-os-mcp
+  npm run inspect
+
+  This opens a local web UI where you pick a tool, fill in the input fields, and see the response — ideal for your own test runs. It reads the .env file since you're running it from the project dir.
+
+  Quick sanity check
+
+  - claude mcp get mage-os shows the stored config
+  - If it shows &quot;failed&quot;, 99% of the time it's the build being stale (npm run build) or a bad MAGENTO_BASE_URL.
+
+  ---
+  Where we are: 3 working tools (search_products, get_product, check_stock), all verified end-to-end and pushed.
+
+  Next natural step is the discovery pair — browse_categories (category tree) + get_category_products — so an agent can explore the store structure (&quot;what departments do you have?&quot; → &quot;show me what's in Bags&quot;). Want me to build those next, or
+  would you rather pause and test what we have through one of the paths above first?</pre>
+</body>
+</html>

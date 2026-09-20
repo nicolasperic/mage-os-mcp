@@ -6,6 +6,14 @@ import { createGraphQLClient } from "./magento/client.js";
 import { searchProducts, searchProductsSchema } from "./tools/searchProducts.js";
 import { getProduct, getProductSchema } from "./tools/getProduct.js";
 import { checkStock, checkStockSchema } from "./tools/checkStock.js";
+import {
+  browseCategories,
+  browseCategoriesSchema,
+} from "./tools/browseCategories.js";
+import {
+  getCategoryProducts,
+  getCategoryProductsSchema,
+} from "./tools/getCategoryProducts.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -68,6 +76,42 @@ async function main() {
     },
     async (args) => {
       const result = await checkStock(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "browse_categories",
+    {
+      title: "Browse categories",
+      description:
+        "Return the store's category tree (departments and their subcategories) " +
+        "with product counts. Use this to discover how the catalog is organized, " +
+        "then pass a category `uid` to get_category_products to list its items.",
+      inputSchema: browseCategoriesSchema,
+    },
+    async () => {
+      const result = await browseCategories(client);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_category_products",
+    {
+      title: "Get category products",
+      description:
+        "List products within a category by its `uid` (from browse_categories), " +
+        "with pagination and sorting. Use this to show what's available in a " +
+        "department, e.g. everything in 'Bags'.",
+      inputSchema: getCategoryProductsSchema,
+    },
+    async (args) => {
+      const result = await getCategoryProducts(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
