@@ -23,6 +23,19 @@ import { viewCart, viewCartSchema } from "./tools/viewCart.js";
 import { login, loginSchema } from "./tools/login.js";
 import { getCustomer, getCustomerSchema } from "./tools/getCustomer.js";
 import { getOrderStatus, getOrderStatusSchema } from "./tools/getOrderStatus.js";
+import {
+  setShippingAddress,
+  setShippingAddressSchema,
+} from "./tools/setShippingAddress.js";
+import {
+  setShippingMethod,
+  setShippingMethodSchema,
+} from "./tools/setShippingMethod.js";
+import {
+  setPaymentMethod,
+  setPaymentMethodSchema,
+} from "./tools/setPaymentMethod.js";
+import { placeOrder, placeOrderSchema } from "./tools/placeOrder.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -229,6 +242,78 @@ async function main() {
     },
     async (args) => {
       const result = await getOrderStatus(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "set_shipping_address",
+    {
+      title: "Set shipping address",
+      description:
+        "Set the guest email and shipping/billing address on a cart (step 1 of " +
+        "checkout). Returns the available shipping methods to choose from next.",
+      inputSchema: setShippingAddressSchema,
+    },
+    async (args) => {
+      const result = await setShippingAddress(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "set_shipping_method",
+    {
+      title: "Set shipping method",
+      description:
+        "Select a shipping method on the cart (step 2 of checkout), using a " +
+        "carrier_code/method_code from set_shipping_address. Returns the " +
+        "available payment methods and updated totals.",
+      inputSchema: setShippingMethodSchema,
+    },
+    async (args) => {
+      const result = await setShippingMethod(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "set_payment_method",
+    {
+      title: "Set payment method",
+      description:
+        "Select a payment method on the cart (step 3 of checkout), using a code " +
+        "from set_shipping_method. Returns the final totals to confirm before " +
+        "placing the order.",
+      inputSchema: setPaymentMethodSchema,
+    },
+    async (args) => {
+      const result = await setPaymentMethod(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "place_order",
+    {
+      title: "Place order",
+      description:
+        "Submit the cart as an order (final step of checkout). The cart must " +
+        "already have a shipping address, shipping method and payment method. " +
+        "Returns the order number. This action is irreversible — confirm the " +
+        "totals with the user before calling it.",
+      inputSchema: placeOrderSchema,
+    },
+    async (args) => {
+      const result = await placeOrder(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

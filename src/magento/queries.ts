@@ -112,6 +112,116 @@ export const VIEW_CART_QUERY = gql`
   ${CART_FIELDS}
 `;
 
+// --- Checkout (guest) ---
+// GraphQL executes root mutation fields serially in document order, so we can
+// set the guest email, shipping address and billing address in one round trip.
+export const SET_SHIPPING_ADDRESS_MUTATION = gql`
+  mutation SetShippingAddress(
+    $cartId: String!
+    $email: String!
+    $address: CartAddressInput!
+  ) {
+    setGuestEmailOnCart(input: { cart_id: $cartId, email: $email }) {
+      cart {
+        id
+      }
+    }
+    setShippingAddressesOnCart(
+      input: { cart_id: $cartId, shipping_addresses: [{ address: $address }] }
+    ) {
+      cart {
+        shipping_addresses {
+          available_shipping_methods {
+            carrier_code
+            method_code
+            carrier_title
+            method_title
+            available
+            amount {
+              value
+              currency
+            }
+          }
+        }
+      }
+    }
+    setBillingAddressOnCart(
+      input: { cart_id: $cartId, billing_address: { address: $address } }
+    ) {
+      cart {
+        id
+      }
+    }
+  }
+`;
+
+export const SET_SHIPPING_METHOD_MUTATION = gql`
+  mutation SetShippingMethod(
+    $cartId: String!
+    $carrier: String!
+    $method: String!
+  ) {
+    setShippingMethodsOnCart(
+      input: {
+        cart_id: $cartId
+        shipping_methods: [{ carrier_code: $carrier, method_code: $method }]
+      }
+    ) {
+      cart {
+        available_payment_methods {
+          code
+          title
+        }
+        prices {
+          subtotal_excluding_tax {
+            value
+            currency
+          }
+          grand_total {
+            value
+            currency
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const SET_PAYMENT_METHOD_MUTATION = gql`
+  mutation SetPaymentMethod($cartId: String!, $code: String!) {
+    setPaymentMethodOnCart(
+      input: { cart_id: $cartId, payment_method: { code: $code } }
+    ) {
+      cart {
+        selected_payment_method {
+          code
+          title
+        }
+        prices {
+          subtotal_excluding_tax {
+            value
+            currency
+          }
+          grand_total {
+            value
+            currency
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const PLACE_ORDER_MUTATION = gql`
+  mutation PlaceOrder($cartId: String!) {
+    placeOrder(input: { cart_id: $cartId }) {
+      order {
+        order_number
+      }
+    }
+  }
+`;
+
 export const GENERATE_TOKEN_MUTATION = gql`
   mutation GenerateCustomerToken($email: String!, $password: String!) {
     generateCustomerToken(email: $email, password: $password) {

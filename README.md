@@ -33,8 +33,27 @@ Early v1. Working tools:
 | `login` | Authenticate a customer (email + password) → returns a `session_id` | GraphQL |
 | `get_customer` | Logged-in customer's profile & saved addresses (by `session_id`) | GraphQL |
 | `get_order_status` | Logged-in customer's orders — status, totals, items, tracking | GraphQL |
+| `set_shipping_address` | Checkout step 1: set guest email + address → available shipping methods | GraphQL |
+| `set_shipping_method` | Checkout step 2: pick a shipping method → available payment methods + totals | GraphQL |
+| `set_payment_method` | Checkout step 3: pick a payment method → confirm totals | GraphQL |
+| `place_order` | Checkout final step: submit the cart → returns the order number | GraphQL |
 
-Planned next: checkout / place order. B2B is intentionally out of scope for now.
+B2B is intentionally out of scope for now.
+
+### End-to-end shopping flow
+
+The tools compose into a complete "AI shops the store" journey:
+
+```
+search_products / browse_categories   → discover
+get_product / check_stock             → evaluate
+create_guest_cart → add_to_cart       → build a basket
+set_shipping_address                  → (returns shipping options)
+set_shipping_method                   → (returns payment options + totals)
+set_payment_method → place_order      → order number 🎉
+```
+
+> **Note on checkout:** the flow uses Magento's **guest checkout** mutations. `place_order` is **irreversible** — an agent should confirm the totals with the user first (the tool description instructs it to). Offline payment methods (e.g. `checkmo`, Check / Money Order) work out of the box; online gateways that need client-side tokenization are out of scope.
 
 > **Note on carts:** the cart tools use Magento's **guest cart** mutations (no login required). `add_to_cart` currently targets **simple products** by SKU; configurable/bundle products (which need selected options) are reported back in `user_errors` and are a planned enhancement.
 
