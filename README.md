@@ -21,8 +21,9 @@ Early v1. Working tools:
 |---|---|---|
 | `search_products` | Free-text catalog search → SKU, name, price, stock, image | GraphQL |
 | `get_product` | Full product detail by SKU → description, pricing, discounts, stock, categories, media | GraphQL |
+| `check_stock` | Batch availability check for up to 100 SKUs → in-stock flag + low-stock qty | GraphQL |
 
-Planned next: `check_stock`, `browse_categories` / `get_category_products`, then authenticated `get_order_status` and `get_customer` (via GraphQL customer token). B2B is intentionally out of scope for now.
+Planned next: `browse_categories` / `get_category_products`, then authenticated `get_order_status` and `get_customer` (via GraphQL customer token). B2B is intentionally out of scope for now.
 
 ## Requirements
 

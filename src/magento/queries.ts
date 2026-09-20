@@ -45,6 +45,19 @@ export const SEARCH_PRODUCTS_QUERY = gql`
   }
 `;
 
+export const CHECK_STOCK_QUERY = gql`
+  query CheckStock($skus: [String!]!) {
+    products(filter: { sku: { in: $skus } }, pageSize: 100) {
+      items {
+        sku
+        name
+        stock_status
+        only_x_left_in_stock
+      }
+    }
+  }
+`;
+
 export const GET_PRODUCT_QUERY = gql`
   query GetProduct($sku: String!) {
     products(filter: { sku: { eq: $sku } }, pageSize: 1) {

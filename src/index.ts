@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import { createGraphQLClient } from "./magento/client.js";
 import { searchProducts, searchProductsSchema } from "./tools/searchProducts.js";
 import { getProduct, getProductSchema } from "./tools/getProduct.js";
+import { checkStock, checkStockSchema } from "./tools/checkStock.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -48,6 +49,25 @@ async function main() {
     },
     async (args) => {
       const result = await getProduct(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "check_stock",
+    {
+      title: "Check stock",
+      description:
+        "Check availability for one or more products by SKU. Returns, per SKU, " +
+        "whether it was found, whether it is in stock, and the remaining " +
+        "quantity when the store exposes a low-stock threshold. Use this to " +
+        "confirm availability before recommending or ordering items.",
+      inputSchema: checkStockSchema,
+    },
+    async (args) => {
+      const result = await checkStock(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
