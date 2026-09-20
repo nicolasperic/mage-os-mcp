@@ -1,5 +1,8 @@
 # mage-os-mcp
 
+[![CI](https://github.com/nicolasperic/mage-os-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasperic/mage-os-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI agents **shop and query a Magento / Mage-OS store**. It connects to a store's public **storefront GraphQL API**, so any Magento 2.4+ / Mage-OS store can use it — no module to install, no admin credentials required for the core catalog tools.
 
 > Point Claude (or any MCP client) at your store and ask: _"Find me a waterproof jacket under $100 and tell me if it's in stock."_
@@ -80,6 +83,19 @@ The server speaks MCP over **stdio**. `stdout` is reserved for the protocol; log
 ```bash
 npm run inspect
 ```
+
+## Testing
+
+Unit tests (Vitest) run each tool against a mocked GraphQL client, so they need
+no live store:
+
+```bash
+npm test          # builds, then runs the suite once
+npm run test:watch
+```
+
+CI (GitHub Actions) type-checks, builds, and tests on Node 20 & 22 for every
+push and pull request — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ### Use with Claude Desktop / Claude Code
 
