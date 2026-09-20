@@ -24,8 +24,13 @@ Early v1. Working tools:
 | `check_stock` | Batch availability check for up to 100 SKUs → in-stock flag + low-stock qty | GraphQL |
 | `browse_categories` | Store category tree (departments + subcategories) with product counts | GraphQL |
 | `get_category_products` | List products in a category by `uid`, with pagination & sorting | GraphQL |
+| `create_guest_cart` | Start an anonymous shopping cart → returns a `cart_id` | GraphQL |
+| `add_to_cart` | Add products (SKU + quantity) to a guest cart; per-item errors surfaced | GraphQL |
+| `view_cart` | View a guest cart's line items and totals by `cart_id` | GraphQL |
 
-Planned next: guest cart flow (`create_guest_cart`, `add_to_cart`, `view_cart`), then authenticated `get_order_status` and `get_customer` (via GraphQL customer token). B2B is intentionally out of scope for now.
+Planned next: authenticated `get_order_status` and `get_customer` (via GraphQL customer token), then checkout / place order. B2B is intentionally out of scope for now.
+
+> **Note on carts:** the cart tools use Magento's **guest cart** mutations (no login required). `add_to_cart` currently targets **simple products** by SKU; configurable/bundle products (which need selected options) are reported back in `user_errors` and are a planned enhancement.
 
 ## Requirements
 

@@ -45,6 +45,73 @@ export const SEARCH_PRODUCTS_QUERY = gql`
   }
 `;
 
+// Shared cart selection, reused across the cart mutation/query so the shape
+// returned to the agent is always identical.
+const CART_FIELDS = gql`
+  fragment CartFields on Cart {
+    id
+    total_quantity
+    items {
+      uid
+      quantity
+      product {
+        sku
+        name
+      }
+      prices {
+        row_total {
+          value
+          currency
+        }
+      }
+    }
+    prices {
+      subtotal_excluding_tax {
+        value
+        currency
+      }
+      grand_total {
+        value
+        currency
+      }
+    }
+  }
+`;
+
+export const CREATE_GUEST_CART_MUTATION = gql`
+  mutation CreateGuestCart {
+    createGuestCart {
+      cart {
+        id
+      }
+    }
+  }
+`;
+
+export const ADD_TO_CART_MUTATION = gql`
+  mutation AddToCart($cartId: String!, $cartItems: [CartItemInput!]!) {
+    addProductsToCart(cartId: $cartId, cartItems: $cartItems) {
+      cart {
+        ...CartFields
+      }
+      user_errors {
+        code
+        message
+      }
+    }
+  }
+  ${CART_FIELDS}
+`;
+
+export const VIEW_CART_QUERY = gql`
+  query ViewCart($cartId: String!) {
+    cart(cart_id: $cartId) {
+      ...CartFields
+    }
+  }
+  ${CART_FIELDS}
+`;
+
 export const BROWSE_CATEGORIES_QUERY = gql`
   query BrowseCategories {
     categoryList {

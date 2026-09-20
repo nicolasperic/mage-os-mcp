@@ -14,6 +14,12 @@ import {
   getCategoryProducts,
   getCategoryProductsSchema,
 } from "./tools/getCategoryProducts.js";
+import {
+  createGuestCart,
+  createGuestCartSchema,
+} from "./tools/createGuestCart.js";
+import { addToCart, addToCartSchema } from "./tools/addToCart.js";
+import { viewCart, viewCartSchema } from "./tools/viewCart.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -112,6 +118,59 @@ async function main() {
     },
     async (args) => {
       const result = await getCategoryProducts(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "create_guest_cart",
+    {
+      title: "Create guest cart",
+      description:
+        "Start a new anonymous (guest) shopping cart. Returns a cart_id that " +
+        "you must pass to add_to_cart and view_cart. Call this once at the " +
+        "start of a shopping session.",
+      inputSchema: createGuestCartSchema,
+    },
+    async () => {
+      const result = await createGuestCart(client);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "add_to_cart",
+    {
+      title: "Add to cart",
+      description:
+        "Add one or more products (by SKU and quantity) to a guest cart. " +
+        "Returns the updated cart with line items and totals. Per-item problems " +
+        "(out of stock, unknown SKU, configurable products needing options) are " +
+        "reported in user_errors rather than failing the whole call.",
+      inputSchema: addToCartSchema,
+    },
+    async (args) => {
+      const result = await addToCart(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "view_cart",
+    {
+      title: "View cart",
+      description:
+        "View the current contents and totals of a guest cart by its cart_id.",
+      inputSchema: viewCartSchema,
+    },
+    async (args) => {
+      const result = await viewCart(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
