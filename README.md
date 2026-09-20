@@ -37,8 +37,9 @@ Early v1. Working tools:
 | `set_shipping_method` | Checkout step 2: pick a shipping method → available payment methods + totals | GraphQL |
 | `set_payment_method` | Checkout step 3: pick a payment method → confirm totals | GraphQL |
 | `place_order` | Checkout final step: submit the cart → returns the order number | GraphQL |
+| `get_my_company` | Authenticated customer's **B2B company** + team roster (optional) | GraphQL |
 
-B2B is intentionally out of scope for now.
+> **Note on B2B:** `get_my_company` requires the store to expose B2B company data over GraphQL — the open-source [Orangecat B2B suite](https://github.com/olivertar/m2_b2bsdk) plus the [`Orangecat_CompanyGraphQl`](https://github.com/nicolasperic/mage-os-b2b-graphql) companion module. On stores without it, the tool returns `supported: false` instead of erroring, so it stays safe to include against any store.
 
 ### End-to-end shopping flow
 

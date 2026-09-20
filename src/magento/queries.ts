@@ -230,6 +230,33 @@ export const GENERATE_TOKEN_MUTATION = gql`
   }
 `;
 
+// Requires the Orangecat B2B suite + the Orangecat_CompanyGraphQl companion
+// module (https://github.com/nicolasperic/mage-os-b2b-graphql) on the store.
+export const GET_MY_COMPANY_QUERY = gql`
+  query GetMyCompany {
+    company {
+      id
+      name
+      legal_name
+      email
+      vat_tax_id
+      city
+      region
+      country_code
+      telephone
+      is_company_admin
+      role_id
+      users {
+        firstname
+        lastname
+        email
+        role_id
+        is_company_admin
+      }
+    }
+  }
+`;
+
 export const GET_CUSTOMER_QUERY = gql`
   query GetCustomer {
     customer {

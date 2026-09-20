@@ -36,6 +36,7 @@ import {
   setPaymentMethodSchema,
 } from "./tools/setPaymentMethod.js";
 import { placeOrder, placeOrderSchema } from "./tools/placeOrder.js";
+import { getMyCompany, getMyCompanySchema } from "./tools/getMyCompany.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -314,6 +315,25 @@ async function main() {
     },
     async (args) => {
       const result = await placeOrder(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_my_company",
+    {
+      title: "Get my B2B company",
+      description:
+        "Get the authenticated customer's B2B company (profile + team roster) " +
+        "using a session_id from login. Requires the store to have B2B company " +
+        "support exposed over GraphQL (Orangecat B2B suite + " +
+        "Orangecat_CompanyGraphQl); returns supported:false otherwise.",
+      inputSchema: getMyCompanySchema,
+    },
+    async (args) => {
+      const result = await getMyCompany(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

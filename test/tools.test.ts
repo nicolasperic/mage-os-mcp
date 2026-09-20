@@ -9,6 +9,7 @@ import { addToCart } from "../dist/tools/addToCart.js";
 import { login } from "../dist/tools/login.js";
 import { getCustomer } from "../dist/tools/getCustomer.js";
 import { getOrderStatus } from "../dist/tools/getOrderStatus.js";
+import { getMyCompany } from "../dist/tools/getMyCompany.js";
 
 /** A GraphQLClient whose `request` is a mock we control. */
 function mockClient(response: unknown) {
@@ -323,5 +324,56 @@ describe("getOrderStatus", () => {
     const session_id = storeToken("tok");
     await getOrderStatus({ request } as any, { session_id, pageSize: 10 });
     expect(request.mock.calls[0][1].filter).toBeUndefined();
+  });
+});
+
+describe("getMyCompany", () => {
+  it("shapes the company + roster when present", async () => {
+    const request = vi.fn().mockResolvedValue({
+      company: {
+        id: 1,
+        name: "Costello Industries",
+        legal_name: "Costello Industries LLC",
+        email: "purchasing@costello.example",
+        vat_tax_id: "US-VAT-99881",
+        city: "Calder",
+        region: "Michigan",
+        country_code: "US",
+        telephone: "(555) 229-3326",
+        is_company_admin: true,
+        role_id: 1,
+        users: [
+          { firstname: "Veronica", lastname: "Costello", email: "roni_cost@example.com", role_id: 1, is_company_admin: true },
+        ],
+      },
+    });
+    const { storeToken } = await import("../dist/magento/session.js");
+    const session_id = storeToken("tok");
+
+    const out = await getMyCompany({ request } as any, { session_id });
+    expect(out).toMatchObject({ supported: true, has_company: true });
+    expect(out.company.name).toBe("Costello Industries");
+    expect(out.company.users[0]).toMatchObject({ name: "Veronica Costello", is_company_admin: true });
+  });
+
+  it("reports supported:false when the B2B GraphQL field is absent", async () => {
+    const request = vi.fn().mockRejectedValue(
+      new ClientError(
+        { errors: [{ message: 'Cannot query field "company" on type "Query".' }], status: 400, headers: {} as any },
+        { query: "" },
+      ),
+    );
+    const { storeToken } = await import("../dist/magento/session.js");
+    const session_id = storeToken("tok");
+    const out = await getMyCompany({ request } as any, { session_id });
+    expect(out).toMatchObject({ supported: false });
+  });
+
+  it("reports has_company:false when the customer has no company", async () => {
+    const request = vi.fn().mockResolvedValue({ company: null });
+    const { storeToken } = await import("../dist/magento/session.js");
+    const session_id = storeToken("tok");
+    const out = await getMyCompany({ request } as any, { session_id });
+    expect(out).toMatchObject({ supported: true, has_company: false });
   });
 });
