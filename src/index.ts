@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { loadConfig } from "./config.js";
+import { createGraphQLClient } from "./magento/client.js";
+import { searchProducts, searchProductsSchema } from "./tools/searchProducts.js";
+import { getProduct, getProductSchema } from "./tools/getProduct.js";
+
+/**
+ * mage-os-mcp — an MCP server that lets AI agents shop and query a
+ * Magento / Mage-OS store over the storefront GraphQL API.
+ */
+async function main() {
+  const config = loadConfig();
+  const client = createGraphQLClient(config);
+
+  const server = new McpServer({
+    name: "mage-os-mcp",
+    version: "0.1.0",
+  });
+
+  server.registerTool(
+    "search_products",
+    {
+      title: "Search products",
+      description:
+        "Search the store catalog by free-text term. Returns matching products " +
+        "with SKU, name, price, stock status and image. Use this to discover " +
+        "products before fetching full details with get_product.",
+      inputSchema: searchProductsSchema,
+    },
+    async (args) => {
+      const result = await searchProducts(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_product",
+    {
+      title: "Get product details",
+      description:
+        "Fetch full details for a single product by its exact SKU: description, " +
+        "pricing (incl. discounts), stock, categories and images.",
+      inputSchema: getProductSchema,
+    },
+    async (args) => {
+      const result = await getProduct(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  // stderr is safe for logging; stdout is reserved for the MCP protocol.
+  console.error(
+    `mage-os-mcp connected to ${config.graphqlEndpoint} (store: ${config.storeCode})`,
+  );
+}
+
+main().catch((error) => {
+  console.error("Fatal error starting mage-os-mcp:", error);
+  process.exit(1);
+});

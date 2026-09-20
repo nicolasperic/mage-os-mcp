@@ -1,0 +1,47 @@
+{
+  "name": "mage-os-mcp",
+  "version": "0.1.0",
+  "description": "Open-source MCP server that lets AI agents shop and query a Magento / Mage-OS store over the storefront GraphQL API.",
+  "type": "module",
+  "bin": {
+    "mage-os-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "magento",
+    "mage-os",
+    "adobe-commerce",
+    "graphql",
+    "ai",
+    "claude",
+    "ecommerce"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "graphql": "^16.9.0",
+    "graphql-request": "^7.1.0",
+    "undici": "^6.19.8",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
