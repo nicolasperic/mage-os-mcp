@@ -257,6 +257,27 @@ export const GET_MY_COMPANY_QUERY = gql`
   }
 `;
 
+// Requires the Orangecat B2B suite + Orangecat_ProductListsGraphQl companion
+// module on the store.
+export const GET_REQUISITION_LISTS_QUERY = gql`
+  query GetRequisitionLists {
+    customer {
+      requisition_lists {
+        id
+        name
+        description
+        created_at
+        items {
+          product_id
+          sku
+          name
+          qty
+        }
+      }
+    }
+  }
+`;
+
 export const GET_CUSTOMER_QUERY = gql`
   query GetCustomer {
     customer {
