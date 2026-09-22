@@ -1,19 +1,21 @@
 import { randomUUID } from "node:crypto";
+import { InMemoryRepository, type Repository } from "./persistence.js";
 
 /**
  * The execution operation state machine behind the agent → human confirmation
- * handoff. An Execute-tier action (place an order, accept an offer) never
- * completes on the agent's word: it creates an operation that must be confirmed
- * by the buyer in their own session before it executes, and it executes at most
- * once even under retries or timeouts.
+ * handoff. An Execute-tier action never completes on the agent's word: it
+ * creates an operation that must be confirmed by the buyer in their own session
+ * before it executes, and it executes at most once even under retries/timeouts.
  *
  *   pending_confirmation ─(buyer confirms)─▶ confirmed ─(execute)─▶ executed
- *            │                                                        ▲
- *            └────────────── (expires) ──▶ expired                    │
- *                                          rejected ◀─(buyer declines)┘?
+ *            ├─(expires)──▶ expired
+ *            └─(declines)─▶ rejected
  *
- * Only `pending_confirmation → confirmed → executed` is the success path;
- * everything else is terminal and non-retryable into an order.
+ * Only `pending_confirmation → confirmed → executed` is the success path.
+ *
+ * Raw storage is delegated to `Repository` (in-memory by default) so a real
+ * deployment externalizes it — a timed-out agent then finds its operation's
+ * result across a restart or another worker.
  */
 export type OperationStatus =
   | "pending_confirmation"
@@ -24,18 +26,12 @@ export type OperationStatus =
 
 export interface Operation {
   operationId: string;
-  /** Ties the operation to the actor that created it. */
   sessionId: string;
-  /** The action being confirmed, e.g. "place_order". */
   kind: string;
-  /** Caller-supplied key: the same key returns the same operation, never a 2nd. */
   idempotencyKey: string;
-  /** Digest of the exact terms being confirmed (cart/amount snapshot). */
   snapshotDigest: string;
-  /** Kind-specific data needed to execute (e.g. the cart id). */
   payload: Record<string, unknown>;
   status: OperationStatus;
-  /** Set once executed — e.g. the resulting order number. */
   result: Record<string, unknown> | null;
   createdAt: number;
   expiresAt: number;
@@ -48,22 +44,19 @@ export class OperationError extends Error {
   }
 }
 
-/**
- * In-memory operation store. Like the session store, this is externalized in a
- * real deployment (so an operation survives a worker restart and a timed-out
- * agent can still find its result) — behind this same interface.
- */
 export class OperationStore {
-  private readonly ops = new Map<string, Operation>();
-  /** idempotencyKey -> operationId, so a replayed create returns the original. */
-  private readonly byKey = new Map<string, string>();
+  constructor(
+    private readonly ops: Repository<Operation> = new InMemoryRepository<Operation>(),
+    /** Secondary index: idempotencyKey -> operationId. */
+    private readonly keyIndex: Repository<string> = new InMemoryRepository<string>(),
+  ) {}
 
   /**
    * Create a pending operation, or return the existing one for a repeated
    * idempotency key. A replay with a *different* snapshot for the same key is a
    * conflict — the terms changed under a reused key.
    */
-  create(input: {
+  async create(input: {
     sessionId: string;
     kind: string;
     idempotencyKey: string;
@@ -71,18 +64,20 @@ export class OperationStore {
     payload?: Record<string, unknown>;
     ttlMs?: number;
     now?: number;
-  }): Operation {
+  }): Promise<Operation> {
     const now = input.now ?? Date.now();
-    const existingId = this.byKey.get(input.idempotencyKey);
+    const existingId = await this.keyIndex.get(input.idempotencyKey);
     if (existingId) {
-      const existing = this.ops.get(existingId)!;
-      if (existing.snapshotDigest !== input.snapshotDigest) {
-        throw new OperationError(
-          "Idempotency key reused with different terms. Use a new key for a " +
-            "new request.",
-        );
+      const existing = await this.ops.get(existingId);
+      if (existing) {
+        if (existing.snapshotDigest !== input.snapshotDigest) {
+          throw new OperationError(
+            "Idempotency key reused with different terms. Use a new key for a " +
+              "new request.",
+          );
+        }
+        return existing;
       }
-      return existing;
     }
 
     const op: Operation = {
@@ -97,19 +92,20 @@ export class OperationStore {
       createdAt: now,
       expiresAt: now + (input.ttlMs ?? 15 * 60 * 1000),
     };
-    this.ops.set(op.operationId, op);
-    this.byKey.set(op.idempotencyKey, op.operationId);
+    await this.ops.set(op.operationId, op);
+    await this.keyIndex.set(op.idempotencyKey, op.operationId);
     return op;
   }
 
   /** Read an operation, rolling it to `expired` if its window has passed. */
-  get(operationId: string, now = Date.now()): Operation {
-    const op = this.ops.get(operationId);
+  async get(operationId: string, now = Date.now()): Promise<Operation> {
+    const op = await this.ops.get(operationId);
     if (!op) {
       throw new OperationError("Unknown operation id.");
     }
     if (op.status === "pending_confirmation" && now >= op.expiresAt) {
       op.status = "expired";
+      await this.ops.set(op.operationId, op);
     }
     return op;
   }
@@ -118,8 +114,12 @@ export class OperationStore {
    * Record that the buyer confirmed — but only against the exact terms they
    * saw. A confirmation for a different snapshot is refused.
    */
-  markConfirmed(operationId: string, snapshotDigest: string, now = Date.now()): Operation {
-    const op = this.get(operationId, now);
+  async markConfirmed(
+    operationId: string,
+    snapshotDigest: string,
+    now = Date.now(),
+  ): Promise<Operation> {
+    const op = await this.get(operationId, now);
     if (op.status === "confirmed" || op.status === "executed") {
       return op; // idempotent: already past this gate
     }
@@ -130,13 +130,15 @@ export class OperationStore {
       throw new OperationError("Confirmation does not match the pending terms.");
     }
     op.status = "confirmed";
+    await this.ops.set(op.operationId, op);
     return op;
   }
 
-  markRejected(operationId: string, now = Date.now()): Operation {
-    const op = this.get(operationId, now);
+  async markRejected(operationId: string, now = Date.now()): Promise<Operation> {
+    const op = await this.get(operationId, now);
     if (op.status === "pending_confirmation") {
       op.status = "rejected";
+      await this.ops.set(op.operationId, op);
     }
     return op;
   }
@@ -145,8 +147,12 @@ export class OperationStore {
    * Mark executed and attach the result. Idempotent: a second call returns the
    * already-recorded result rather than allowing a second execution.
    */
-  markExecuted(operationId: string, result: Record<string, unknown>, now = Date.now()): Operation {
-    const op = this.get(operationId, now);
+  async markExecuted(
+    operationId: string,
+    result: Record<string, unknown>,
+    now = Date.now(),
+  ): Promise<Operation> {
+    const op = await this.get(operationId, now);
     if (op.status === "executed") {
       return op;
     }
@@ -157,10 +163,11 @@ export class OperationStore {
     }
     op.status = "executed";
     op.result = result;
+    await this.ops.set(op.operationId, op);
     return op;
   }
 
-  size(): number {
-    return this.ops.size;
+  async size(): Promise<number> {
+    return this.ops.count();
   }
 }

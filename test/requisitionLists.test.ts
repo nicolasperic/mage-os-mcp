@@ -21,7 +21,7 @@ describe("getRequisitionLists", () => {
       },
     });
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
 
     const out = await getRequisitionLists({ request } as any, { session_id });
     expect(out.supported).toBe(true);
@@ -40,7 +40,7 @@ describe("getRequisitionLists", () => {
       ),
     );
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
     const out = await getRequisitionLists({ request } as any, { session_id });
     expect(out).toMatchObject({ supported: false });
   });
@@ -48,7 +48,7 @@ describe("getRequisitionLists", () => {
   it("returns an empty list set cleanly", async () => {
     const request = vi.fn().mockResolvedValue({ customer: { requisition_lists: [] } });
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
     const out = await getRequisitionLists({ request } as any, { session_id });
     expect(out).toMatchObject({ supported: true, count: 0, lists: [] });
   });

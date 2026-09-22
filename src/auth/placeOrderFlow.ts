@@ -43,11 +43,11 @@ export async function requestPlaceOrder(
   deps: PlaceOrderDeps,
   args: { session_id: string; cart_id: string; idempotency_key: string },
 ) {
-  const ctx = deps.sessions.resolveWithScope(args.session_id, "purchase.execute");
+  const ctx = await deps.sessions.resolveWithScope(args.session_id, "purchase.execute");
   const cart = await deps.loadCart(ctx, args.cart_id);
   const digest = snapshotDigest(cart);
 
-  const op = deps.operations.create({
+  const op = await deps.operations.create({
     sessionId: ctx.sessionId,
     kind: "place_order",
     idempotencyKey: args.idempotency_key,
@@ -97,8 +97,8 @@ export async function getOperationStatus(
   args: { session_id: string; operation_id: string },
   now = Date.now(),
 ) {
-  const ctx = deps.sessions.resolve(args.session_id, now);
-  const op = deps.operations.get(args.operation_id, now);
+  const ctx = await deps.sessions.resolve(args.session_id, now);
+  const op = await deps.operations.get(args.operation_id, now);
 
   // An operation belongs to the session that created it.
   if (op.sessionId !== ctx.sessionId) {
@@ -109,10 +109,10 @@ export async function getOperationStatus(
   if (op.status === "confirmed") {
     const cartId = String(op.payload.cartId);
     const result = await deps.executeOrder(ctx, cartId);
-    deps.operations.markExecuted(op.operationId, result, now);
+    await deps.operations.markExecuted(op.operationId, result, now);
   }
 
-  const settled = deps.operations.get(op.operationId, now);
+  const settled = await deps.operations.get(op.operationId, now);
   return {
     operation_id: settled.operationId,
     status: settled.status,

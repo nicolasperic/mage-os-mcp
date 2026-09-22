@@ -13,10 +13,10 @@ const CART = {
   currency: "USD",
 };
 
-function harness(scopes: Scope[] = ["purchase.execute"]) {
+async function harness(scopes: Scope[] = ["purchase.execute"]) {
   const sessions = new SessionStore();
   const operations = new OperationStore();
-  const sessionId = sessions.store({
+  const sessionId = await sessions.store({
     customerId: 1,
     companyId: 7,
     roleId: 1,
@@ -38,7 +38,7 @@ function harness(scopes: Scope[] = ["purchase.execute"]) {
 
 describe("place-order confirmation handoff", () => {
   it("requires the purchase.execute scope", async () => {
-    const { deps, sessionId } = harness(["cart.draft"]);
+    const { deps, sessionId } = await harness(["cart.draft"]);
     await expect(
       requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" }),
     ).rejects.toThrow(ScopeError);
@@ -46,7 +46,7 @@ describe("place-order confirmation handoff", () => {
   });
 
   it("request does not place the order — it returns needs_confirmation", async () => {
-    const { deps, sessionId } = harness();
+    const { deps, sessionId } = await harness();
     const res = await requestPlaceOrder(deps, {
       session_id: sessionId, cart_id: "cart1", idempotency_key: "k1",
     });
@@ -57,7 +57,7 @@ describe("place-order confirmation handoff", () => {
   });
 
   it("polling before confirmation stays pending, still no order", async () => {
-    const { deps, sessionId } = harness();
+    const { deps, sessionId } = await harness();
     const req = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });
     const status = await getOperationStatus(deps, { session_id: sessionId, operation_id: req.operation_id });
     expect(status.status).toBe("pending_confirmation");
@@ -65,11 +65,11 @@ describe("place-order confirmation handoff", () => {
   });
 
   it("executes once the buyer confirms, and only once across polls", async () => {
-    const { deps, operations, sessionId, executeOrder } = harness();
+    const { deps, operations, sessionId, executeOrder } = await harness();
     const req = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });
 
     // Buyer confirms out of band, against the exact terms they saw.
-    operations.markConfirmed(req.operation_id, snapshotDigest(CART));
+    await operations.markConfirmed(req.operation_id, snapshotDigest(CART));
 
     const first = await getOperationStatus(deps, { session_id: sessionId, operation_id: req.operation_id });
     expect(first.status).toBe("executed");
@@ -82,9 +82,9 @@ describe("place-order confirmation handoff", () => {
   });
 
   it("a replayed idempotency key returns the same operation, not a new order", async () => {
-    const { deps, operations, sessionId, executeOrder } = harness();
+    const { deps, operations, sessionId, executeOrder } = await harness();
     const first = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });
-    operations.markConfirmed(first.operation_id, snapshotDigest(CART));
+    await operations.markConfirmed(first.operation_id, snapshotDigest(CART));
     await getOperationStatus(deps, { session_id: sessionId, operation_id: first.operation_id });
 
     // Same key again → recognized as already placed.
@@ -94,18 +94,18 @@ describe("place-order confirmation handoff", () => {
     expect(executeOrder).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects a confirmation whose terms changed", () => {
-    const { operations, sessionId } = harness();
-    const op = operations.create({
+  it("rejects a confirmation whose terms changed", async () => {
+    const { operations, sessionId } = await harness();
+    const op = await operations.create({
       sessionId, kind: "place_order", idempotencyKey: "k1", snapshotDigest: "digest-A",
     });
-    expect(() => operations.markConfirmed(op.operationId, "digest-B")).toThrow(OperationError);
+    await expect(operations.markConfirmed(op.operationId, "digest-B")).rejects.toThrow(OperationError);
   });
 
   it("won't let another session read someone else's operation", async () => {
-    const { deps, operations, sessions, sessionId } = harness();
+    const { deps, sessions, sessionId } = await harness();
     const req = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });
-    const otherSession = sessions.store({
+    const otherSession = await sessions.store({
       customerId: 2, companyId: 7, roleId: 3, scopes: ["purchase.execute"] as Scope[],
       token: "OTHER", expiresAt: Date.now() + 60_000, via: "test",
     });

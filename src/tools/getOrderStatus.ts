@@ -63,7 +63,7 @@ export async function getOrderStatus(
   const data = await client.request<OrdersResponse>(
     GET_ORDERS_QUERY,
     { filter, pageSize: args.pageSize },
-    authHeaders(args.session_id),
+    await authHeaders(args.session_id),
   );
 
   const orders = data.customer.orders.items.map((o) => ({

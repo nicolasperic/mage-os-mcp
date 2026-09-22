@@ -21,7 +21,7 @@ export async function login(
       GENERATE_TOKEN_MUTATION,
       { email: args.email, password: args.password },
     );
-    const session_id = storeToken(data.generateCustomerToken.token);
+    const session_id = await storeToken(data.generateCustomerToken.token);
     return {
       success: true,
       session_id,

@@ -1,27 +1,28 @@
 import { randomUUID } from "node:crypto";
-import {
-  isExpired,
-  type ActorContext,
-} from "./actorContext.js";
+import { isExpired, type ActorContext } from "./actorContext.js";
 import { requireScope, type Scope } from "./scopes.js";
+import { InMemoryRepository, type Repository } from "./persistence.js";
 
 /**
  * Holds active actor contexts by opaque session id.
  *
- * This is the delegated-auth successor to the old `session_id -> bearer token`
- * map: it stores a full scoped context, honors expiry, and supports explicit
- * revocation. It is still an in-memory store for now — a real deployment
- * externalizes this so it survives restarts and spans workers, and so that no
- * worker ever reuses a prior actor's context. That swap happens behind this
- * same interface.
+ * The delegated-auth successor to the old `session_id -> bearer token` map: it
+ * stores a full scoped context, honors expiry, and supports revocation. Raw
+ * storage is delegated to a `Repository` (in-memory by default), so a real
+ * deployment externalizes it — surviving restarts and spanning workers — behind
+ * this same interface, and no worker ever reuses a prior actor's context.
  */
 export class SessionStore {
-  private readonly contexts = new Map<string, ActorContext>();
+  constructor(
+    private readonly repo: Repository<ActorContext> = new InMemoryRepository<ActorContext>(),
+  ) {}
 
   /** Store a context (assigning a session id if it has none) and return the id. */
-  store(context: Omit<ActorContext, "sessionId"> & { sessionId?: string }): string {
+  async store(
+    context: Omit<ActorContext, "sessionId"> & { sessionId?: string },
+  ): Promise<string> {
     const sessionId = context.sessionId ?? randomUUID();
-    this.contexts.set(sessionId, { ...context, sessionId });
+    await this.repo.set(sessionId, { ...context, sessionId });
     return sessionId;
   }
 
@@ -29,15 +30,15 @@ export class SessionStore {
    * Resolve a live context, or throw. Expired contexts are evicted and treated
    * as unknown, so a stale or revoked session dies at its next call.
    */
-  resolve(sessionId: string, now = Date.now()): ActorContext {
-    const context = this.contexts.get(sessionId);
+  async resolve(sessionId: string, now = Date.now()): Promise<ActorContext> {
+    const context = await this.repo.get(sessionId);
     if (!context) {
       throw new SessionError(
         "Unknown or expired session. Authenticate again to obtain a new one.",
       );
     }
     if (isExpired(context, now)) {
-      this.contexts.delete(sessionId);
+      await this.repo.delete(sessionId);
       throw new SessionError(
         "This session has expired. Authenticate again to obtain a new one.",
       );
@@ -46,20 +47,24 @@ export class SessionStore {
   }
 
   /** Resolve a context and assert it carries the required scope. */
-  resolveWithScope(sessionId: string, scope: Scope, now = Date.now()): ActorContext {
-    const context = this.resolve(sessionId, now);
+  async resolveWithScope(
+    sessionId: string,
+    scope: Scope,
+    now = Date.now(),
+  ): Promise<ActorContext> {
+    const context = await this.resolve(sessionId, now);
     requireScope(context.scopes, scope);
     return context;
   }
 
   /** Revoke a session immediately (buyer or company admin action). */
-  revoke(sessionId: string): void {
-    this.contexts.delete(sessionId);
+  async revoke(sessionId: string): Promise<void> {
+    await this.repo.delete(sessionId);
   }
 
   /** Test/introspection helper. */
-  size(): number {
-    return this.contexts.size;
+  async size(): Promise<number> {
+    return this.repo.count();
   }
 }
 

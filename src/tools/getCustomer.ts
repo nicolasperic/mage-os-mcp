@@ -37,7 +37,7 @@ export async function getCustomer(
   const data = await client.request<GetCustomerResponse>(
     GET_CUSTOMER_QUERY,
     {},
-    authHeaders(args.session_id),
+    await authHeaders(args.session_id),
   );
 
   const c = data.customer;

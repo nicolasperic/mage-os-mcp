@@ -21,7 +21,7 @@ export function sessionStore(): SessionStore {
   return store;
 }
 
-export function storeToken(token: string): string {
+export async function storeToken(token: string): Promise<string> {
   return store.store({
     customerId: 0,
     companyId: null,
@@ -33,9 +33,9 @@ export function storeToken(token: string): string {
   });
 }
 
-export function getToken(sessionId: string): string {
+export async function getToken(sessionId: string): Promise<string> {
   try {
-    return store.resolve(sessionId).token;
+    return (await store.resolve(sessionId)).token;
   } catch {
     throw new Error(
       "Unknown or expired session_id. Call `login` again to obtain a new one.",
@@ -43,17 +43,19 @@ export function getToken(sessionId: string): string {
   }
 }
 
-export function authHeaders(sessionId: string): Record<string, string> {
-  return { Authorization: `Bearer ${getToken(sessionId)}` };
+export async function authHeaders(
+  sessionId: string,
+): Promise<Record<string, string>> {
+  return { Authorization: `Bearer ${await getToken(sessionId)}` };
 }
 
 /** Revoke a session immediately; a later call with this id fails. */
-export function revokeSession(sessionId: string): boolean {
+export async function revokeSession(sessionId: string): Promise<boolean> {
   try {
-    store.resolve(sessionId);
+    await store.resolve(sessionId);
   } catch {
     return false;
   }
-  store.revoke(sessionId);
+  await store.revoke(sessionId);
   return true;
 }

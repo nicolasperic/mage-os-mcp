@@ -14,7 +14,7 @@ export const logoutSchema = {
  * half of the model's "authority is revocable" principle.
  */
 export async function logout(args: { session_id: string }) {
-  const revoked = revokeSession(args.session_id);
+  const revoked = await revokeSession(args.session_id);
   return {
     revoked,
     note: revoked

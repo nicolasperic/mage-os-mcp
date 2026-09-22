@@ -17,6 +17,7 @@ and not yet wired into the tools** — the existing shopper-facing server on
 | `operations.ts` | The execute-tier operation state machine (`pending_confirmation → confirmed → executed`) with an idempotency key. |
 | `confirmation.ts` | The `ConfirmationProvider` seam (signed link + buyer confirm) + the terms `snapshotDigest`. |
 | `placeOrderFlow.ts` | `requestPlaceOrder` (returns `needs_confirmation`, never places) + `getOperationStatus` (executes once, after the buyer confirms). |
+| `persistence.ts` | The `Repository<T>` persistence port + `InMemoryRepository` default. The stores delegate raw storage here, so an external backend (Redis/DB) is a drop-in. Async by design. |
 
 ## Scope vs. store scope
 
@@ -32,9 +33,11 @@ and not yet wired into the tools** — the existing shopper-facing server on
   customer token) so the server keeps working locally. It is a resource-owner
   password flow — exactly what the B2B model replaces — and grants only
   read-only scopes. Not the production path.
-- **`SessionStore`** is in-memory for now; a real deployment externalizes it so
-  contexts survive restarts, span workers, and are never reused across actors.
-  That swap happens behind this same interface.
+- **`SessionStore` / `OperationStore`** delegate raw storage to the
+  `Repository` port (`persistence.ts`). The default is `InMemoryRepository`; a
+  real deployment injects a shared backend (Redis/DB) so contexts and operations
+  survive restarts, span workers, and are never reused across actors — no change
+  to the store logic. The port is async so the swap is a drop-in.
 
 ## Built so far
 
@@ -50,5 +53,5 @@ and not yet wired into the tools** — the existing shopper-facing server on
   replacing the `login` tool and re-tiering the cart/checkout tools.
 - Provide the real `TokenVerifier` (OAuth 2.1 + PKCE) and `ConfirmationProvider`
   (store-hosted signed-link page) once the authorization server is defined.
-- Externalize `SessionStore` / `OperationStore` so state survives restarts and
-  spans workers.
+- Provide a shared-backend `Repository` (Redis/DB) implementation — the port and
+  in-memory default are in place; only the adapter remains.

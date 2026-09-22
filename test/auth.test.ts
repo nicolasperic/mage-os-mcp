@@ -65,30 +65,30 @@ describe("actor context", () => {
 });
 
 describe("session store", () => {
-  it("stores and resolves a live context, asserting scope", () => {
+  it("stores and resolves a live context, asserting scope", async () => {
     const store = new SessionStore();
-    const id = store.store(baseContext({ scopes: ["cart.draft"] as Scope[] }));
-    expect(store.resolve(id).customerId).toBe(1);
-    expect(store.resolveWithScope(id, "cart.draft").sessionId).toBe(id);
-    expect(() => store.resolveWithScope(id, "purchase.execute")).toThrow(ScopeError);
+    const id = await store.store(baseContext({ scopes: ["cart.draft"] as Scope[] }));
+    expect((await store.resolve(id)).customerId).toBe(1);
+    expect((await store.resolveWithScope(id, "cart.draft")).sessionId).toBe(id);
+    await expect(store.resolveWithScope(id, "purchase.execute")).rejects.toThrow(ScopeError);
   });
 
-  it("treats expired contexts as unknown and evicts them", () => {
+  it("treats expired contexts as unknown and evicts them", async () => {
     const store = new SessionStore();
-    const id = store.store(baseContext({ expiresAt: 500 }));
-    expect(() => store.resolve(id, 600)).toThrow(SessionError);
-    expect(store.size()).toBe(0);
+    const id = await store.store(baseContext({ expiresAt: 500 }));
+    await expect(store.resolve(id, 600)).rejects.toThrow(SessionError);
+    expect(await store.size()).toBe(0);
   });
 
-  it("revokes immediately", () => {
+  it("revokes immediately", async () => {
     const store = new SessionStore();
-    const id = store.store(baseContext());
-    store.revoke(id);
-    expect(() => store.resolve(id)).toThrow(SessionError);
+    const id = await store.store(baseContext());
+    await store.revoke(id);
+    await expect(store.resolve(id)).rejects.toThrow(SessionError);
   });
 
-  it("unknown session ids throw", () => {
-    expect(() => new SessionStore().resolve("nope")).toThrow(SessionError);
+  it("unknown session ids throw", async () => {
+    await expect(new SessionStore().resolve("nope")).rejects.toThrow(SessionError);
   });
 });
 

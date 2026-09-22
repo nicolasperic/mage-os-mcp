@@ -50,8 +50,10 @@ live) · ⬜ missing.
 5. **Real `ConfirmationProvider`** — a store-hosted signed-link confirmation page.
 6. **Derive scopes from Mage-OS company permissions**, so #7 is enforced from the
    authoritative source rather than placeholder defaults.
-7. **Externalize `SessionStore` / `OperationStore`** so state survives restarts
-   and spans workers.
+7. ✅ **Externalize `SessionStore` / `OperationStore`** — done: raw storage is
+   behind an async `Repository` port (`src/auth/persistence.ts`) with an
+   in-memory default; a shared backend (Redis/DB) is now a drop-in adapter, no
+   store-logic change. (The adapter itself is deployment-specific.)
 8. **Store→agent security tests** (prompt-injection, PII egress) from the sub-spec.
 
 ## Dependency note

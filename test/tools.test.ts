@@ -279,7 +279,7 @@ describe("getCustomer", () => {
       },
     });
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
 
     const out = await getCustomer({ request } as any, { session_id });
     expect(out.firstname).toBe("Veronica");
@@ -311,7 +311,7 @@ describe("getOrderStatus", () => {
   it("maps orders and applies a number filter when order_number is given", async () => {
     const request = vi.fn().mockResolvedValue(ordersResponse);
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
 
     const out = await getOrderStatus({ request } as any, { session_id, order_number: "000000001", pageSize: 10 });
     expect(out.orders[0]).toMatchObject({ number: "000000001", status: "Processing", grand_total: 36.39 });
@@ -321,7 +321,7 @@ describe("getOrderStatus", () => {
   it("sends no filter when listing recent orders", async () => {
     const request = vi.fn().mockResolvedValue(ordersResponse);
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
     await getOrderStatus({ request } as any, { session_id, pageSize: 10 });
     expect(request.mock.calls[0][1].filter).toBeUndefined();
   });
@@ -348,7 +348,7 @@ describe("getMyCompany", () => {
       },
     });
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
 
     const out = await getMyCompany({ request } as any, { session_id });
     expect(out).toMatchObject({ supported: true, has_company: true });
@@ -364,7 +364,7 @@ describe("getMyCompany", () => {
       ),
     );
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
     const out = await getMyCompany({ request } as any, { session_id });
     expect(out).toMatchObject({ supported: false });
   });
@@ -372,8 +372,32 @@ describe("getMyCompany", () => {
   it("reports has_company:false when the customer has no company", async () => {
     const request = vi.fn().mockResolvedValue({ company: null });
     const { storeToken } = await import("../dist/magento/session.js");
-    const session_id = storeToken("tok");
+    const session_id = await storeToken("tok");
     const out = await getMyCompany({ request } as any, { session_id });
     expect(out).toMatchObject({ supported: true, has_company: false });
+  });
+});
+
+describe("login", () => {
+  it("returns a string session_id (awaited), usable by later tools", async () => {
+    const request = vi.fn().mockResolvedValue({ generateCustomerToken: { token: "TOK-1" } });
+    const out = await login({ request } as any, { email: "a@b.com", password: "pw" });
+    expect(out.success).toBe(true);
+    expect(typeof out.session_id).toBe("string");
+    // the returned session resolves to the stored bearer
+    const { getToken } = await import("../dist/magento/session.js");
+    expect(await getToken(out.session_id as string)).toBe("TOK-1");
+  });
+
+  it("returns success:false with a message on bad credentials", async () => {
+    const request = vi.fn().mockRejectedValue(
+      new ClientError(
+        { errors: [{ message: "The account sign-in was incorrect" }], status: 200, headers: {} as any },
+        { query: "" },
+      ),
+    );
+    const out = await login({ request } as any, { email: "a@b.com", password: "bad" });
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/incorrect/);
   });
 });

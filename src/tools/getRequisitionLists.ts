@@ -42,7 +42,7 @@ export async function getRequisitionLists(
     data = await client.request<GetRequisitionListsResponse>(
       GET_REQUISITION_LISTS_QUERY,
       {},
-      authHeaders(args.session_id),
+      await authHeaders(args.session_id),
     );
   } catch (error) {
     const errors = error instanceof ClientError ? (error.response.errors ?? []) : [];

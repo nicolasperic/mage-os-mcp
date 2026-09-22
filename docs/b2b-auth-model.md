@@ -133,8 +133,8 @@ second order.
 |---|---|---|---|
 | Credential → context | `AuthProvider` | `PasswordAuthProvider` (dev-only, read-only scopes) | `DelegatedAuthProvider` + a `TokenVerifier` (authenticated account binding) |
 | Buyer confirmation | `ConfirmationProvider` | `StubConfirmationProvider` | store-hosted signed-link page |
-| Context storage | `SessionStore` | in-memory | externalized (survives restarts, spans workers) |
-| Operation storage | `OperationStore` | in-memory | externalized (find outcome after timeout) |
+| Context storage | `SessionStore` → `Repository` port | `InMemoryRepository` | shared backend (Redis/DB) — drop-in, survives restarts, spans workers |
+| Operation storage | `OperationStore` → `Repository` port | `InMemoryRepository` | shared backend — a timed-out agent finds its outcome |
 
 See [`b2b-mcp-requirements.md`](b2b-mcp-requirements.md) for how these map to the
 RFC's MCP requirements and what's still open.

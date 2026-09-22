@@ -47,7 +47,7 @@ export async function getMyCompany(
     data = await client.request<GetMyCompanyResponse>(
       GET_MY_COMPANY_QUERY,
       {},
-      authHeaders(args.session_id),
+      await authHeaders(args.session_id),
     );
   } catch (error) {
     // A missing `company` field means the B2B GraphQL module isn't installed.
