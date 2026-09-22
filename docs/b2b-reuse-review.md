@@ -14,6 +14,15 @@ The **tool surface, GraphQL layer, output shaping, and test/CI discipline transf
 
 Rough split of the 16 tools: **~8 adopt** (reads), **~5 adapt** (cart/checkout re-tiered), **1 replace** (`login`), plus the **session store to rebuild** and **`place_order` to move behind confirmation**.
 
+> **Progress since this review.** Much of the recommended path is now built on the
+> `b2b-delegated-auth` branch (merged into `main`): the scoped session store is
+> **live** (expiry + revocation + a `logout` tool), the confirmation handoff and
+> idempotent operation model are built and tested, `redactByScope` enforces
+> field-level scope, store→agent security tests exist, and a
+> `get_requisition_lists` tool was added. What remains is genuinely blocked on
+> RFC-level decisions (the delegated OAuth flow to replace `login`, company-scoped
+> carts). See [`b2b-mcp-requirements.md`](b2b-mcp-requirements.md) for live status.
+
 ---
 
 ## Component assessment
@@ -82,9 +91,9 @@ The Read tier alone is a large, working, demoable surface that transfers with hi
 
 ## Recommended path
 
-1. **Keep** the Read tier, GraphQL client, shapers and tests as the foundation.
-2. **Replace** `login` with the delegated OAuth 2.1 + PKCE flow; rebuild `session.ts` as a scoped actor-context store with expiry and revocation.
-3. **Re-tier** cart/checkout tools onto company-scoped carts (Draft), and move `place_order` behind the confirmation handoff (Execute).
-4. **Add** the store→agent security tests (prompt-injection, PII egress) alongside the existing suite.
+1. ✅ **Keep** the Read tier, GraphQL client, shapers and tests as the foundation. *(done)*
+2. 🟡 **Replace** `login` with the delegated OAuth 2.1 + PKCE flow; rebuild `session.ts` as a scoped actor-context store with expiry and revocation. *(session store rebuilt & live with expiry + revocation + `logout`; the delegated OAuth replacement for `login` is blocked on the authorization-server decision)*
+3. 🟡 **Re-tier** cart/checkout tools onto company-scoped carts (Draft), and move `place_order` behind the confirmation handoff (Execute). *(the confirmation handoff + idempotent operation model are built and tested; wiring to live placement needs company-scoped carts, which are store-side)*
+4. ✅ **Add** the store→agent security tests (prompt-injection, PII egress) alongside the existing suite. *(done)*
 
-**Verdict:** adopt the surface, replace the auth. The reusable value here is real and sizeable; the authentication layer is the deliberate rebuild.
+**Verdict:** adopt the surface, replace the auth. The reusable value here is real and sizeable; the authentication layer is the deliberate rebuild — now substantially built, with the remaining pieces blocked on RFC-level decisions rather than on this server.
