@@ -5,7 +5,11 @@
 
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI agents **shop and query a Magento / Mage-OS store**. It connects to a store's public **storefront GraphQL API**, so any Magento 2.4+ / Mage-OS store can use it — no module to install, no admin credentials required for the core catalog tools.
 
-> **Mage-OS B2B initiative:** this server is a reuse candidate for the community B2B suite's MCP adapter. See [`docs/b2b-reuse-review.md`](docs/b2b-reuse-review.md) for an adopt / adapt / replace review against the proposed B2B delegated-authorization model.
+> **Mage-OS B2B initiative:** this server is a reuse candidate for the community B2B suite's MCP adapter.
+> - [`docs/b2b-reuse-review.md`](docs/b2b-reuse-review.md) — adopt / adapt / replace review of this server.
+> - [`docs/b2b-mcp-requirements.md`](docs/b2b-mcp-requirements.md) — the RFC's MCP requirements mapped to progress.
+> - [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md) — entities, ER diagram and the operation state machine.
+> - Work in progress lives on the `b2b-delegated-auth` branch (`src/auth/`).
 
 > Point Claude (or any MCP client) at your store and ask: _"Find me a waterproof jacket under $100 and tell me if it's in stock."_
 
