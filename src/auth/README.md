@@ -14,6 +14,13 @@ and not yet wired into the tools** — the existing shopper-facing server on
 | `actorContext.ts` | The server-side identity (customer, company, role, scopes, expiry). `safeView()` projects it for the client **without the credential**. |
 | `sessionStore.ts` | Scoped-context store with expiry + revocation. Successor to `magento/session.ts`. |
 | `authProvider.ts` | The seam: how a credential becomes an `ActorContext`. |
+| `operations.ts` | The execute-tier operation state machine (`pending_confirmation → confirmed → executed`) with an idempotency key. |
+| `confirmation.ts` | The `ConfirmationProvider` seam (signed link + buyer confirm) + the terms `snapshotDigest`. |
+| `placeOrderFlow.ts` | `requestPlaceOrder` (returns `needs_confirmation`, never places) + `getOperationStatus` (executes once, after the buyer confirms). |
+
+## Scope vs. store scope
+
+`scopes` here are **OAuth-style permissions** (`catalog.read`, `purchase.execute`) — what the delegated token may do. They are unrelated to Magento's website / store / store-view scope (which storefront context a request runs in, carried by the `Store` header).
 
 ## The seams (where undefined store-side pieces plug in)
 
@@ -29,10 +36,19 @@ and not yet wired into the tools** — the existing shopper-facing server on
   contexts survive restarts, span workers, and are never reused across actors.
   That swap happens behind this same interface.
 
-## Next slice
+## Built so far
 
-The confirmation handoff: an operation state machine
-(`pending_confirmation → confirmed → executed`, idempotency key), `place_order`
-re-tiered to return `needs_confirmation` instead of executing, and a
-`get_operation_status` tool — with the signed link + buyer-confirm step behind a
-`ConfirmationProvider` seam.
+- **Slice 1** — the auth foundation (scopes, context, session store, provider seam).
+- **Slice 2** — the confirmation handoff (`operations.ts`, `confirmation.ts`,
+  `placeOrderFlow.ts`). The full sequence runs end-to-end in tests: request →
+  `needs_confirmation` → buyer confirms out of band → executes exactly once,
+  idempotent under replays and repeated polls.
+
+## Still ahead
+
+- Wire these modules into the live MCP server (`index.ts`) behind a feature flag,
+  replacing the `login` tool and re-tiering the cart/checkout tools.
+- Provide the real `TokenVerifier` (OAuth 2.1 + PKCE) and `ConfirmationProvider`
+  (store-hosted signed-link page) once the authorization server is defined.
+- Externalize `SessionStore` / `OperationStore` so state survives restarts and
+  spans workers.
