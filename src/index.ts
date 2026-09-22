@@ -21,6 +21,7 @@ import {
 import { addToCart, addToCartSchema } from "./tools/addToCart.js";
 import { viewCart, viewCartSchema } from "./tools/viewCart.js";
 import { login, loginSchema } from "./tools/login.js";
+import { logout, logoutSchema } from "./tools/logout.js";
 import { getCustomer, getCustomerSchema } from "./tools/getCustomer.js";
 import { getOrderStatus, getOrderStatusSchema } from "./tools/getOrderStatus.js";
 import {
@@ -37,6 +38,10 @@ import {
 } from "./tools/setPaymentMethod.js";
 import { placeOrder, placeOrderSchema } from "./tools/placeOrder.js";
 import { getMyCompany, getMyCompanySchema } from "./tools/getMyCompany.js";
+import {
+  getRequisitionLists,
+  getRequisitionListsSchema,
+} from "./tools/getRequisitionLists.js";
 
 /**
  * mage-os-mcp — an MCP server that lets AI agents shop and query a
@@ -214,6 +219,23 @@ async function main() {
   );
 
   server.registerTool(
+    "logout",
+    {
+      title: "Log out (revoke session)",
+      description:
+        "Revoke a session_id so it can no longer be used. Sessions also expire " +
+        "on their own; this ends one immediately.",
+      inputSchema: logoutSchema,
+    },
+    async (args) => {
+      const result = await logout(args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
     "get_customer",
     {
       title: "Get customer profile",
@@ -334,6 +356,25 @@ async function main() {
     },
     async (args) => {
       const result = await getMyCompany(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "get_requisition_lists",
+    {
+      title: "Get requisition lists",
+      description:
+        "Get the authenticated customer's B2B requisition lists (saved lists " +
+        "for repeat ordering) using a session_id from login. Requires the store " +
+        "to expose them over GraphQL (Orangecat B2B suite + " +
+        "Orangecat_ProductListsGraphQl); returns supported:false otherwise.",
+      inputSchema: getRequisitionListsSchema,
+    },
+    async (args) => {
+      const result = await getRequisitionLists(client, args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

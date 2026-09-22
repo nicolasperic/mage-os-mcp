@@ -1,33 +1,59 @@
-import { randomUUID } from "node:crypto";
+import { SessionStore } from "../auth/sessionStore.js";
+import { DEV_DEFAULT_SCOPES } from "../auth/scopes.js";
 
 /**
- * In-memory map of opaque session id -> Magento customer bearer token.
+ * The server's session layer. Backward-compatible surface (`storeToken`,
+ * `getToken`, `authHeaders`) over the scoped `SessionStore` from `../auth`, so
+ * the whole server now gets expiry + revocation + a scoped actor context
+ * without any tool having to change.
  *
- * The raw token (a credential) is deliberately kept here on the server and
- * never returned to the MCP client / model. Tools that need authentication
- * take a `session_id` and we look up the token to build the auth header.
- *
- * State lives only for the lifetime of the server process; if it restarts,
- * clients simply log in again.
+ * `storeToken` is the dev/legacy path: it wraps a raw customer bearer in a
+ * read-only-scoped context. The delegated (OAuth) path stores a richer context
+ * directly via `sessionStore()`.
  */
-const tokens = new Map<string, string>();
+const store = new SessionStore();
+
+/** Legacy sessions live a day; delegated tokens set their own (shorter) expiry. */
+const LEGACY_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** The shared store, for the delegated-auth wiring to use directly. */
+export function sessionStore(): SessionStore {
+  return store;
+}
 
 export function storeToken(token: string): string {
-  const sessionId = randomUUID();
-  tokens.set(sessionId, token);
-  return sessionId;
+  return store.store({
+    customerId: 0,
+    companyId: null,
+    roleId: null,
+    scopes: [...DEV_DEFAULT_SCOPES],
+    token,
+    expiresAt: Date.now() + LEGACY_TTL_MS,
+    via: "legacy-password",
+  });
 }
 
 export function getToken(sessionId: string): string {
-  const token = tokens.get(sessionId);
-  if (!token) {
+  try {
+    return store.resolve(sessionId).token;
+  } catch {
     throw new Error(
       "Unknown or expired session_id. Call `login` again to obtain a new one.",
     );
   }
-  return token;
 }
 
 export function authHeaders(sessionId: string): Record<string, string> {
   return { Authorization: `Bearer ${getToken(sessionId)}` };
+}
+
+/** Revoke a session immediately; a later call with this id fails. */
+export function revokeSession(sessionId: string): boolean {
+  try {
+    store.resolve(sessionId);
+  } catch {
+    return false;
+  }
+  store.revoke(sessionId);
+  return true;
 }

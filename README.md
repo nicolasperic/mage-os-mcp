@@ -5,7 +5,11 @@
 
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI agents **shop and query a Magento / Mage-OS store**. It connects to a store's public **storefront GraphQL API**, so any Magento 2.4+ / Mage-OS store can use it — no module to install, no admin credentials required for the core catalog tools.
 
-> **Mage-OS B2B initiative:** this server is a reuse candidate for the community B2B suite's MCP adapter. See [`docs/b2b-reuse-review.md`](docs/b2b-reuse-review.md) for an adopt / adapt / replace review against the proposed B2B delegated-authorization model.
+> **Mage-OS B2B initiative:** this server is a reuse candidate for the community B2B suite's MCP adapter.
+> - [`docs/b2b-reuse-review.md`](docs/b2b-reuse-review.md) — adopt / adapt / replace review of this server.
+> - [`docs/b2b-mcp-requirements.md`](docs/b2b-mcp-requirements.md) — the RFC's MCP requirements mapped to progress.
+> - [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md) — entities, ER diagram and the operation state machine.
+> - Work in progress lives on the `b2b-delegated-auth` branch (`src/auth/`).
 
 > Point Claude (or any MCP client) at your store and ask: _"Find me a waterproof jacket under $100 and tell me if it's in stock."_
 
@@ -33,6 +37,7 @@ Early v1. Working tools:
 | `add_to_cart` | Add products (SKU + quantity) to a guest cart; per-item errors surfaced | GraphQL |
 | `view_cart` | View a guest cart's line items and totals by `cart_id` | GraphQL |
 | `login` | Authenticate a customer (email + password) → returns a `session_id` | GraphQL |
+| `logout` | Revoke a `session_id` immediately | — |
 | `get_customer` | Logged-in customer's profile & saved addresses (by `session_id`) | GraphQL |
 | `get_order_status` | Logged-in customer's orders — status, totals, items, tracking | GraphQL |
 | `set_shipping_address` | Checkout step 1: set guest email + address → available shipping methods | GraphQL |
@@ -40,8 +45,11 @@ Early v1. Working tools:
 | `set_payment_method` | Checkout step 3: pick a payment method → confirm totals | GraphQL |
 | `place_order` | Checkout final step: submit the cart → returns the order number | GraphQL |
 | `get_my_company` | Authenticated customer's **B2B company** + team roster (optional) | GraphQL |
+| `get_requisition_lists` | Authenticated customer's **B2B requisition lists** + items (optional) | GraphQL |
 
-> **Note on B2B:** `get_my_company` requires the store to expose B2B company data over GraphQL — the open-source [Orangecat B2B suite](https://github.com/olivertar/m2_b2bsdk) plus the [`Orangecat_CompanyGraphQl`](https://github.com/nicolasperic/mage-os-b2b-graphql) companion module. On stores without it, the tool returns `supported: false` instead of erroring, so it stays safe to include against any store.
+> **Note on B2B:** `get_my_company` and `get_requisition_lists` require the store to expose B2B data over GraphQL — the open-source [Orangecat B2B suite](https://github.com/olivertar/m2_b2bsdk) plus the companion modules ([`Orangecat_CompanyGraphQl`](https://github.com/nicolasperic/mage-os-b2b-graphql), [`Orangecat_ProductListsGraphQl`](https://github.com/nicolasperic/mage-os-b2b-requisition-graphql)). On stores without them, the tools return `supported: false` instead of erroring, so they stay safe to include against any store.
+
+> **Sessions:** `login` returns an opaque `session_id`; the underlying credential is held server-side and never returned. Sessions carry a scoped context with expiry and can be revoked (`logout`) — see the delegated-access model in [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md).
 
 ### End-to-end shopping flow
 

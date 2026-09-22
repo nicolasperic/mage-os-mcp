@@ -21,3 +21,26 @@ describe("session store", () => {
     expect(() => getToken("nope")).toThrow(/login/i);
   });
 });
+
+import { revokeSession } from "../dist/magento/session.js";
+import { logout } from "../dist/tools/logout.js";
+
+describe("session revocation (scoped store)", () => {
+  it("revokeSession invalidates a live session", () => {
+    const id = storeToken("tok-x");
+    expect(getToken(id)).toBe("tok-x");
+    expect(revokeSession(id)).toBe(true);
+    expect(() => getToken(id)).toThrow(/login/i);
+  });
+
+  it("revoking an unknown session reports false", () => {
+    expect(revokeSession("nope")).toBe(false);
+  });
+
+  it("the logout tool revokes and reports it", async () => {
+    const id = storeToken("tok-y");
+    const out = await logout({ session_id: id });
+    expect(out.revoked).toBe(true);
+    expect(() => getToken(id)).toThrow();
+  });
+});
