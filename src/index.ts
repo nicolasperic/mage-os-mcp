@@ -21,6 +21,7 @@ import {
 import { addToCart, addToCartSchema } from "./tools/addToCart.js";
 import { viewCart, viewCartSchema } from "./tools/viewCart.js";
 import { login, loginSchema } from "./tools/login.js";
+import { logout, logoutSchema } from "./tools/logout.js";
 import { getCustomer, getCustomerSchema } from "./tools/getCustomer.js";
 import { getOrderStatus, getOrderStatusSchema } from "./tools/getOrderStatus.js";
 import {
@@ -211,6 +212,23 @@ async function main() {
     },
     async (args) => {
       const result = await login(client, args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    "logout",
+    {
+      title: "Log out (revoke session)",
+      description:
+        "Revoke a session_id so it can no longer be used. Sessions also expire " +
+        "on their own; this ends one immediately.",
+      inputSchema: logoutSchema,
+    },
+    async (args) => {
+      const result = await logout(args);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
