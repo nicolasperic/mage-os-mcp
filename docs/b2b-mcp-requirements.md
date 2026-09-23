@@ -65,3 +65,19 @@ and how company permissions map to scopes) and are represented in code as seams
 so the MCP work isn't blocked waiting on them.
 
 See [`b2b-auth-model.md`](b2b-auth-model.md) for the entities these reference.
+
+## Known limitations (for reviewers)
+
+Deliberate, documented trade-offs — not oversights:
+
+- **Live `place_order` is guest checkout, without idempotency.** It's the shopper
+  demo path; the confirmation handoff (`src/auth/placeOrderFlow.ts` — atomic
+  claim, idempotency key, outcome-after-timeout) is the B2B replacement and is
+  built + tested but not yet wired to a live tool.
+- **One shared GraphQL client with a single `Store` header.** Per-request auth
+  headers keep sessions isolated, but the store view is server-global — per-request
+  store scoping is needed for multi-website B2B.
+- **Governance installs by wrapping `registerTool`.** Clean and tested, but it
+  couples to the MCP SDK's registration surface; revisit on a major SDK bump.
+- **Stores are in-memory by default.** The `Repository` port makes a shared
+  backend (Redis/DB) a drop-in; shipping one is deployment-specific work.

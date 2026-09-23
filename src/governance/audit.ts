@@ -63,10 +63,28 @@ export class MemoryAuditSink implements AuditSink {
   }
 }
 
-/** Canonical bytes of an event for hashing: everything except its own `hash`. */
+/**
+ * Canonical bytes of an event for hashing: everything except its own `hash`,
+ * with object keys sorted recursively so the digest is independent of key
+ * insertion order. Without this, an event reconstructed with a different key
+ * order (e.g. re-serialized by a collector) would fail verification even though
+ * its content is identical.
+ */
 function canonical(event: AuditEvent): string {
   const { hash, ...rest } = event;
-  return JSON.stringify(rest);
+  return JSON.stringify(sortKeys(rest));
+}
+
+function sortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((k) => [k, sortKeys((value as Record<string, unknown>)[k])]),
+    );
+  }
+  return value;
 }
 
 /**

@@ -120,6 +120,21 @@ describe("hash-chained audit (tamper evidence)", () => {
     mem.events[1].tool = "delete_everything";
     expect(verifyChain(mem.events)).toBe(false);
   });
+
+  it("verifies regardless of key insertion order (canonicalization)", async () => {
+    const mem = new MemoryAuditSink();
+    const chained = new HashChainAuditSink(mem);
+    await chained.record({
+      tool: "login", ts: "t", correlationId: "c", actor: { type: "customer" },
+      input: {}, outcome: "ok", durationMs: 1,
+    } as any);
+
+    // Rebuild the recorded event with keys in a different order — same content.
+    const e = mem.events[0];
+    const reordered: any = {};
+    for (const k of Object.keys(e).reverse()) reordered[k] = (e as any)[k];
+    expect(verifyChain([reordered])).toBe(true);
+  });
 });
 
 import { sessionStore } from "../dist/magento/session.js";
