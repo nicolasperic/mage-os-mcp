@@ -22,6 +22,12 @@ import { addToCart, addToCartSchema } from "./tools/addToCart.js";
 import { viewCart, viewCartSchema } from "./tools/viewCart.js";
 import { login, loginSchema } from "./tools/login.js";
 import { logout, logoutSchema } from "./tools/logout.js";
+import { installGovernance } from "./governance/governTool.js";
+import {
+  NullAuditSink,
+  StderrAuditSink,
+  HashChainAuditSink,
+} from "./governance/audit.js";
 import { getCustomer, getCustomerSchema } from "./tools/getCustomer.js";
 import { getOrderStatus, getOrderStatusSchema } from "./tools/getOrderStatus.js";
 import {
@@ -55,6 +61,18 @@ async function main() {
     name: "mage-os-mcp",
     version: "0.1.0",
   });
+
+  // Governance: audit every tool call (who / what / outcome / timing), redacted
+  // and append-only. Sink is chosen by env: MCP_AUDIT=off disables it,
+  // MCP_AUDIT_CHAIN=true makes the trail tamper-evident. Applied before any
+  // tool is registered, so it covers them all.
+  const auditSink =
+    process.env.MCP_AUDIT === "off"
+      ? new NullAuditSink()
+      : process.env.MCP_AUDIT_CHAIN === "true"
+        ? new HashChainAuditSink(new StderrAuditSink())
+        : new StderrAuditSink();
+  installGovernance(server, { sink: auditSink });
 
   server.registerTool(
     "search_products",

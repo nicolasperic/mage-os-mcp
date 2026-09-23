@@ -51,6 +51,8 @@ Early v1. Working tools:
 
 > **Sessions:** `login` returns an opaque `session_id`; the underlying credential is held server-side and never returned. Sessions carry a scoped context with expiry and can be revoked (`logout`) — see the delegated-access model in [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md).
 
+> **Governance & audit:** every tool call is audited — a redacted, append-only record of who / what / outcome / timing — via a pluggable sink (`MCP_AUDIT`, `MCP_AUDIT_CHAIN` for tamper-evidence). This is the access-control + audit-trail foundation for adopting an MCP under SOC 2-style compliance. See [`src/governance/`](src/governance/README.md).
+
 ### End-to-end shopping flow
 
 The tools compose into a complete "AI shops the store" journey:
