@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { AuditEvent, AuditSink } from "./audit.js";
 import { redactArgs } from "./redact.js";
 import { sessionStore } from "../magento/session.js";
+import type { Scope } from "../auth/scopes.js";
 
 /**
  * The governance wrapper: it surrounds every MCP tool call with a server-side
@@ -45,17 +46,21 @@ export const defaultResolveActor: ActorResolver = async (args) => {
 export interface GovernanceOptions {
   sink: AuditSink;
   resolveActor?: ActorResolver;
+  /** Per-tool required scope. A call to a listed tool must resolve a session
+   *  that carries the scope, or it's denied (and the denial is audited). */
+  toolScopes?: Record<string, Scope>;
 }
 
 type ToolHandler = (args: any, extra?: any) => Promise<any>;
 
-/** Wrap one tool handler with audit + timing + actor resolution. */
+/** Wrap one tool handler with audit + timing + actor resolution + scope check. */
 export function governTool(
   tool: string,
   handler: ToolHandler,
   opts: GovernanceOptions,
 ): ToolHandler {
   const resolveActor = opts.resolveActor ?? defaultResolveActor;
+  const requiredScope = opts.toolScopes?.[tool];
 
   return async (args: any, extra?: any) => {
     const correlationId = randomUUID();
@@ -71,6 +76,11 @@ export function governTool(
     };
 
     try {
+      // Centralized access control: enforce the tool's required scope before it
+      // runs. Throwing here means the denial is recorded by the catch below.
+      if (requiredScope) {
+        await sessionStore().resolveWithScope(args?.session_id, requiredScope);
+      }
       const result = await handler(args, extra);
       await opts.sink.record({
         ...base,

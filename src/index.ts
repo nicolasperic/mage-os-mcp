@@ -72,7 +72,19 @@ async function main() {
       : process.env.MCP_AUDIT_CHAIN === "true"
         ? new HashChainAuditSink(new StderrAuditSink())
         : new StderrAuditSink();
-  installGovernance(server, { sink: auditSink });
+
+  // Centralized access control: the scope each authenticated tool requires,
+  // enforced in one place. Public/guest tools (search, cart, login/logout) have
+  // no required scope. Delegated tokens carry scopes derived from the member's
+  // Mage-OS permissions; the dev login grants the read-tier defaults.
+  const toolScopes = {
+    get_customer: "customer.read",
+    get_order_status: "orders.read.own",
+    get_my_company: "company.read",
+    get_requisition_lists: "lists.read",
+  } as const;
+
+  installGovernance(server, { sink: auditSink, toolScopes });
 
   server.registerTool(
     "search_products",

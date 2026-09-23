@@ -121,3 +121,55 @@ describe("hash-chained audit (tamper evidence)", () => {
     expect(verifyChain(mem.events)).toBe(false);
   });
 });
+
+import { sessionStore } from "../dist/magento/session.js";
+
+describe("centralized scope enforcement", () => {
+  async function seedSession(scopes: string[]) {
+    // Store a session in the shared store the wrapper reads from.
+    return sessionStore().store({
+      customerId: 1, companyId: 7, roleId: 1,
+      scopes: scopes as any, token: "BEARER",
+      expiresAt: Date.now() + 60_000, via: "test",
+    });
+  }
+
+  it("allows a call when the session carries the required scope", async () => {
+    const sink = new MemoryAuditSink();
+    const sid = await seedSession(["company.read"]);
+    const wrapped = governTool("get_my_company", async () => ({ ok: true }), {
+      sink, toolScopes: { get_my_company: "company.read" as any },
+    });
+    const res = await wrapped({ session_id: sid });
+    expect(res).toEqual({ ok: true });
+    expect(sink.events[0].outcome).toBe("ok");
+  });
+
+  it("denies (and audits) when the session lacks the scope", async () => {
+    const sink = new MemoryAuditSink();
+    const sid = await seedSession(["company.read"]); // no purchase.execute
+    const wrapped = governTool("place_order", async () => ({ placed: true }), {
+      sink, toolScopes: { place_order: "purchase.execute" as any },
+    });
+    await expect(wrapped({ session_id: sid })).rejects.toThrow();
+    expect(sink.events[0]).toMatchObject({ tool: "place_order", outcome: "error" });
+    expect(sink.events[0].error).toMatch(/scope/i);
+  });
+
+  it("denies when there is no session at all", async () => {
+    const sink = new MemoryAuditSink();
+    const wrapped = governTool("get_my_company", async () => ({ ok: true }), {
+      sink, toolScopes: { get_my_company: "company.read" as any },
+    });
+    await expect(wrapped({})).rejects.toThrow();
+    expect(sink.events[0].outcome).toBe("error");
+  });
+
+  it("does not enforce on tools without a declared scope", async () => {
+    const sink = new MemoryAuditSink();
+    const wrapped = governTool("search_products", async () => ({ hits: 1 }), { sink });
+    const res = await wrapped({ search: "bag" });
+    expect(res).toEqual({ hits: 1 });
+    expect(sink.events[0].outcome).toBe("ok");
+  });
+});

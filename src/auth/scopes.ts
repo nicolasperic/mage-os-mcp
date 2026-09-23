@@ -10,12 +10,14 @@
 
 export const SCOPES = [
   // Read tier — no state change.
+  "customer.read",
   "company.read",
   "catalog.read",
   "pricing.read",
   "orders.read.own",
   "orders.read.company",
   "credit.read",
+  "lists.read",
   // Draft tier — prepare, never charge.
   "cart.draft",
   "lists.manage.own",
@@ -31,12 +33,14 @@ export type Scope = (typeof SCOPES)[number];
 export type ScopeTier = "read" | "draft" | "execute";
 
 export const SCOPE_TIER: Record<Scope, ScopeTier> = {
+  "customer.read": "read",
   "company.read": "read",
   "catalog.read": "read",
   "pricing.read": "read",
   "orders.read.own": "read",
   "orders.read.company": "read",
   "credit.read": "read",
+  "lists.read": "read",
   "cart.draft": "draft",
   "lists.manage.own": "draft",
   "lists.manage.company": "draft",
@@ -51,12 +55,14 @@ export const SCOPE_TIER: Record<Scope, ScopeTier> = {
  * Real deployments derive scopes from the authorization server, not from here.
  */
 export const DEV_DEFAULT_SCOPES: Scope[] = [
+  "customer.read",
   "company.read",
   "catalog.read",
   "pricing.read",
   "orders.read.own",
   "orders.read.company",
   "credit.read",
+  "lists.read",
 ];
 
 export function isScope(value: string): value is Scope {
