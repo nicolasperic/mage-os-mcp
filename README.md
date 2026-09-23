@@ -9,6 +9,7 @@ An open-source [Model Context Protocol](https://modelcontextprotocol.io) (MCP) s
 > - [`docs/b2b-reuse-review.md`](docs/b2b-reuse-review.md) — adopt / adapt / replace review of this server.
 > - [`docs/b2b-mcp-requirements.md`](docs/b2b-mcp-requirements.md) — the RFC's MCP requirements mapped to progress.
 > - [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md) — entities, ER diagram and the operation state machine.
+> - [`docs/b2b-community-feedback.md`](docs/b2b-community-feedback.md) — RFC discussion feedback and what it changes here.
 > - Work in progress lives on the `b2b-delegated-auth` branch (`src/auth/`).
 
 > Point Claude (or any MCP client) at your store and ask: _"Find me a waterproof jacket under $100 and tell me if it's in stock."_

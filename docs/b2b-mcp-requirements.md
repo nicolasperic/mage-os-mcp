@@ -2,7 +2,9 @@
 
 Tracks the MCP requirements from the Mage-OS B2B RFC (rev 3), section
 *"Storefront, GraphQL and MCP"*, against what this server has today. Kept in the
-repo so progress is visible next to the code.
+repo so progress is visible next to the code. Community feedback on the RFC and
+what it changes here is tracked separately in
+[`b2b-community-feedback.md`](b2b-community-feedback.md).
 
 **Legend:** ✅ done · 🟡 partial · 🔩 modeled (built behind a seam, not wired
 live) · ⬜ missing.
@@ -25,6 +27,7 @@ live) · ⬜ missing.
 | 6 | **Retrieve the outcome after a timeout** | 🔩 | `branch` — `getOperationStatus` | A timed-out agent re-polls by `operation_id` and gets the settled result (or `pending`) — never blindly re-orders. |
 | 7 | **Business permissions remain in Mage-OS** | 🟡 | `scopes.ts`, `governance/` | Access control is now **centrally enforced**: each authenticated tool declares a required scope and the governance wrapper checks it before the tool runs (denials audited). Scopes are meant to mirror the member's Mage-OS permissions; today the dev login grants read-tier defaults, and **deriving scopes from real Mage-OS company permissions** is the piece pending the authorization server. |
 | 10 | **Audit / governance** (adoption requirement — access control + audit trail) | ✅ | `governance/` | Every tool call emits a redacted, append-only audit record (actor / tool / outcome / timing / correlation id) via a pluggable sink, with optional tamper-evidence (hash chain). Centralized per-tool scope enforcement. Cross-cutting, not B2B-only. |
+| 11 | **Price context is explicit** (raised in discussion, not in the RFC) | ⬜ | — | Tools return a bare `final_price`. An agent cannot tell tax-inclusive consumer pricing from tax-exclusive company pricing, and we surface **no quantity price breaks** at all. Needs a price envelope (`amount`/`currency`/`tax_mode`/`price_view`/`catalog`/`location`) + settable `price_view`. See [feedback §2](b2b-community-feedback.md). |
 | 8 | MCP is an **adapter to the same operations** (no privileged backdoor) | ✅ | design | Tools call the storefront GraphQL operations; no admin/integration credential path. Holds by construction. |
 | 9 | **Code & runtime review** of this repo | ✅ | `main` — [`b2b-reuse-review.md`](b2b-reuse-review.md) | Adopt / adapt / replace assessment delivered. |
 
@@ -43,14 +46,20 @@ live) · ⬜ missing.
    tool). Remaining: replace the `login` tool with the delegated flow, scope-gate
    tools, and route placement through `requestPlaceOrder` / `getOperationStatus`
    (the last needs company-scoped carts).
-2. **Requisition lists** as an MCP tool (Draft tier) — currently absent.
+2. **A generic MultiCart surface** (Draft tier) — reframed from "requisition
+   lists as a tool" after the discussion: ~4 generic cart tools driven by group
+   config, of which requisition lists are one case. See
+   [feedback §4](b2b-community-feedback.md).
 3. **Company-scope the cart** — drafts should build company carts under the
-   resolved context, not guest carts.
+   resolved context, not guest carts. The resolved context needs a
+   **`locationId`** (role assignments and pricing are per location), and the
+   location must enter `snapshotDigest`. See [feedback §1](b2b-community-feedback.md).
 4. **Real `TokenVerifier`** — the authenticated-account-binding mechanism, once
    the authorization server is decided (RFC-level, cross-project).
 5. **Real `ConfirmationProvider`** — a store-hosted signed-link confirmation page.
 6. **Derive scopes from Mage-OS company permissions**, so #7 is enforced from the
-   authoritative source rather than placeholder defaults.
+   authoritative source rather than placeholder defaults. Shape now known from the
+   discussion: derive from `(contact, location)`, not from a bare company role.
 7. ✅ **Externalize `SessionStore` / `OperationStore`** — done: raw storage is
    behind an async `Repository` port (`src/auth/persistence.ts`) with an
    in-memory default; a shared backend (Redis/DB) is now a drop-in adapter, no
