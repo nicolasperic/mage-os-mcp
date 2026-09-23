@@ -67,6 +67,7 @@ export class PasswordAuthProvider implements AuthProvider {
       customerId: 0, // resolved lazily by tools today; delegated tokens carry it
       companyId: null,
       roleId: null,
+      locationId: null,
       scopes: [...this.scopes],
       token,
       expiresAt: Date.now() + this.ttlMs,

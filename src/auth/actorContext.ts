@@ -17,6 +17,18 @@ export interface ActorContext {
   companyId: number | null;
   /** The member's role id within the company, when applicable. */
   roleId: number | null;
+  /**
+   * The company location being acted for, when the store models locations.
+   *
+   * Reference only — the location entity, its CRUD and its admin screens belong
+   * to the Company module; this adapter never becomes a second source of truth
+   * for it. Null today because neither Adobe Commerce B2B nor the Orangecat
+   * suite exposes a location collection; the field exists so that role
+   * resolution and, critically, `snapshotDigest` are already location-shaped
+   * when one does. The digest is a confirmation contract, and versioning it
+   * later is far more expensive than carrying a null now.
+   */
+  locationId: number | null;
   /** Scopes this token carries — the ceiling on what the agent may do. */
   scopes: Scope[];
   /** Underlying bearer for downstream Magento calls. Server-side only. */
@@ -33,6 +45,7 @@ export interface ActorContextView {
   customer_id: number;
   company_id: number | null;
   role_id: number | null;
+  location_id: number | null;
   scopes: Scope[];
   expires_at: string;
   via: string;
@@ -44,6 +57,7 @@ export function safeView(ctx: ActorContext): ActorContextView {
     customer_id: ctx.customerId,
     company_id: ctx.companyId,
     role_id: ctx.roleId,
+    location_id: ctx.locationId,
     scopes: ctx.scopes,
     expires_at: new Date(ctx.expiresAt).toISOString(),
     via: ctx.via,

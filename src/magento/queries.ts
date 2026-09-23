@@ -40,6 +40,16 @@ export const SEARCH_PRODUCTS_QUERY = gql`
             }
           }
         }
+        price_tiers {
+          quantity
+          final_price {
+            value
+            currency
+          }
+          discount {
+            percent_off
+          }
+        }
       }
     }
   }
@@ -396,6 +406,16 @@ export const GET_CATEGORY_PRODUCTS_QUERY = gql`
             }
           }
         }
+        price_tiers {
+          quantity
+          final_price {
+            value
+            currency
+          }
+          discount {
+            percent_off
+          }
+        }
       }
     }
   }
@@ -455,6 +475,16 @@ export const GET_PRODUCT_QUERY = gql`
               amount_off
               percent_off
             }
+          }
+        }
+        price_tiers {
+          quantity
+          final_price {
+            value
+            currency
+          }
+          discount {
+            percent_off
           }
         }
       }

@@ -18,6 +18,7 @@ erDiagram
     CUSTOMER ||--o{ SESSION : authenticates
     COMPANY  ||--o{ SESSION : "scopes to (0..1)"
     ROLE     ||--o{ SESSION : "acts as (0..1)"
+    LOCATION ||--o{ SESSION : "acts at (0..1)"
     SESSION  ||--o{ OPERATION : creates
     OPERATION ||--o| CONFIRMATION : "requires"
 
@@ -26,6 +27,7 @@ erDiagram
       int customer_id FK "Mage-OS customer"
       int company_id FK "nullable"
       int role_id FK "nullable"
+      int location_id FK "nullable; company location acted for"
       json scopes "granted OAuth-style permissions"
       string token "underlying bearer — server-only, never serialized"
       datetime expires_at
@@ -57,6 +59,9 @@ erDiagram
     ROLE {
       int role_id PK "B2B suite, per-company"
     }
+    LOCATION {
+      int location_id PK "Company module; not modelled upstream yet"
+    }
 ```
 
 ## Entities
@@ -72,6 +77,7 @@ and never reconstructed from tool arguments.
 | `customerId` | int | Authenticated Mage-OS customer. |
 | `companyId` | int \| null | Company the token is scoped to; null for a non-company customer. |
 | `roleId` | int \| null | The member's role within the company. |
+| `locationId` | int \| null | The company location being acted for. **Reference only** — the entity, its CRUD and its admin screens belong to the Company module. Null today (neither Adobe Commerce B2B nor the Orangecat suite exposes a location collection); carried so role resolution and `snapshotDigest` are already location-shaped. See [community feedback §1](b2b-community-feedback.md). |
 | `scopes` | `Scope[]` | Granted permissions — the ceiling on what the agent may do. |
 | `token` | string | Underlying Mage-OS bearer for downstream calls. **Server-only**; `safeView()` omits it. |
 | `expiresAt` | epoch ms | After this the context is invalid and evicted. |
@@ -98,6 +104,13 @@ An execute-tier action awaiting confirmation. Guarantees at-most-once execution.
 Issued by the `ConfirmationProvider` for one operation: a signed, single-use link
 the agent presents out of band and the buyer opens in their own session, bound to
 the operation and its `snapshotDigest`.
+
+The digest covers the cart id, its line items, the grand total, the currency
+**and the location**. Location is part of the commercial terms rather than a
+delivery detail — in a multi-location model it selects the catalog, the price
+list and the payment terms — so a confirmation issued for one location must not
+be redeemable against another's pricing. It is included unconditionally (null
+where unmodelled) so the digest never has to be versioned.
 
 ### Value objects
 

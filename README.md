@@ -50,6 +50,16 @@ Early v1. Working tools:
 
 > **Note on B2B:** `get_my_company` and `get_requisition_lists` require the store to expose B2B data over GraphQL — the open-source [Orangecat B2B suite](https://github.com/olivertar/m2_b2bsdk) plus the companion modules ([`Orangecat_CompanyGraphQl`](https://github.com/nicolasperic/mage-os-b2b-graphql), [`Orangecat_ProductListsGraphQl`](https://github.com/nicolasperic/mage-os-b2b-requisition-graphql)). On stores without them, the tools return `supported: false` instead of erroring, so they stay safe to include against any store.
 
+> **Prices are self-describing.** Every monetary value is returned as an envelope —
+> `{ amount, currency, tax_mode, price_view, catalog_id, location_id }` — not a bare
+> number. A storefront renders prices for a human who can see the context; an MCP
+> client can't, and an agent handed `49.99` will repeat it as fact and be wrong for
+> whichever audience sees the other tax treatment. Declare your store's treatment
+> with `MAGENTO_TAX_MODE=incl|excl`; left unset we report `"unknown"` rather than
+> guess. Catalog reads also surface **quantity price breaks** (`tier_pricing`) from
+> native `price_tiers` — quoting a unit price without knowing 100+ drops it 30% is
+> misleading, not merely incomplete.
+
 > **Sessions:** `login` returns an opaque `session_id`; the underlying credential is held server-side and never returned. Sessions carry a scoped context with expiry and can be revoked (`logout`) — see the delegated-access model in [`docs/b2b-auth-model.md`](docs/b2b-auth-model.md).
 
 > **Governance & audit:** every tool call is audited — a redacted, append-only record of who / what / outcome / timing — via a pluggable sink (`MCP_AUDIT`, `MCP_AUDIT_CHAIN` for tamper-evidence). This is the access-control + audit-trail foundation for adopting an MCP under SOC 2-style compliance. See [`src/governance/`](src/governance/README.md).

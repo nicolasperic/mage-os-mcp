@@ -26,12 +26,20 @@ export interface ConfirmationProvider {
  * Stable digest of the exact terms being confirmed. The buyer confirms *this*;
  * if anything material changes, the digest changes and the prior confirmation
  * no longer matches.
+ *
+ * `locationId` is part of the terms, not merely a delivery detail: in a
+ * multi-location B2B model the location selects the catalog, the price list and
+ * the payment terms. Omitting it would let an operation confirmed for one
+ * location execute against another's pricing. It is null on every store that
+ * doesn't model locations, and is included unconditionally so the digest never
+ * has to be versioned once one does.
  */
 export function snapshotDigest(terms: {
   cartId: string;
   items: Array<{ sku: string; quantity: number; row_total: number | null }>;
   grandTotal: number | null;
   currency: string | null;
+  locationId?: number | null;
 }): string {
   const canonical = JSON.stringify({
     cartId: terms.cartId,
@@ -40,6 +48,7 @@ export function snapshotDigest(terms: {
       .sort((a, b) => a.sku.localeCompare(b.sku)),
     grand: terms.grandTotal,
     currency: terms.currency,
+    location: terms.locationId ?? null,
   });
   return createHash("sha256").update(canonical).digest("hex");
 }

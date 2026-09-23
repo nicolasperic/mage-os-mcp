@@ -49,8 +49,16 @@ describe("searchProducts", () => {
     expect(out.results[0]).toEqual({
       sku: "MT11",
       name: "Atlas Fitness Tank",
-      price: 18,
-      currency: "USD",
+      // Prices are self-describing envelopes, never bare numbers.
+      price: {
+        amount: 18,
+        currency: "USD",
+        tax_mode: "unknown",
+        price_view: "consumer",
+        catalog_id: null,
+        location_id: null,
+      },
+      tier_pricing: null,
       in_stock: true,
       url_key: "atlas-fitness-tank",
       image: "http://img/mt11.jpg",
@@ -112,9 +120,22 @@ describe("getProduct", () => {
     expect(out.description).not.toContain("<");
     expect(out.categories).toEqual(["Gear", "Bags"]);
     expect(out.price).toEqual({
-      final: 32,
-      regular: 32,
-      currency: "USD",
+      final: {
+        amount: 32,
+        currency: "USD",
+        tax_mode: "unknown",
+        price_view: "consumer",
+        catalog_id: null,
+        location_id: null,
+      },
+      regular: {
+        amount: 32,
+        currency: "USD",
+        tax_mode: "unknown",
+        price_view: "consumer",
+        catalog_id: null,
+        location_id: null,
+      },
       percent_off: 0,
     });
   });
@@ -205,7 +226,11 @@ describe("getCategoryProducts", () => {
     });
 
     expect(request.mock.calls[0][1]).toMatchObject({ uid: "MjE=", sort: { position: "ASC" } });
-    expect(out.results[0]).toMatchObject({ sku: "WS12", price: 22, in_stock: true });
+    expect(out.results[0]).toMatchObject({
+      sku: "WS12",
+      price: { amount: 22, currency: "USD", price_view: "consumer" },
+      in_stock: true,
+    });
   });
 });
 

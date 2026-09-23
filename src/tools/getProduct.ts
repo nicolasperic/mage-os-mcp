@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { GraphQLClient } from "graphql-request";
 import { GET_PRODUCT_QUERY } from "../magento/queries.js";
+import {
+  defaultPriceContext,
+  money,
+  tierPricing,
+  type PriceContext,
+} from "../magento/price.js";
 
 export const getProductSchema = {
   sku: z
@@ -32,6 +38,11 @@ interface GetProductResponse {
           } | null;
         };
       };
+      price_tiers: Array<{
+        quantity: number | null;
+        final_price: { value: number | null; currency: string | null } | null;
+        discount: { percent_off: number | null } | null;
+      }> | null;
     }>;
   };
 }
@@ -48,6 +59,7 @@ function stripHtml(html: string | null | undefined): string | null {
 export async function getProduct(
   client: GraphQLClient,
   args: { sku: string },
+  priceCtx: PriceContext = defaultPriceContext(),
 ) {
   const data = await client.request<GetProductResponse>(GET_PRODUCT_QUERY, {
     sku: args.sku,
@@ -67,11 +79,11 @@ export async function getProduct(
     in_stock: item.stock_status === "IN_STOCK",
     only_x_left_in_stock: item.only_x_left_in_stock,
     price: {
-      final: min.final_price.value,
-      regular: min.regular_price.value,
-      currency: min.final_price.currency,
+      final: money(min.final_price.value, min.final_price.currency, priceCtx),
+      regular: money(min.regular_price.value, min.regular_price.currency, priceCtx),
       percent_off: min.discount?.percent_off ?? null,
     },
+    tier_pricing: tierPricing(item.price_tiers, priceCtx),
     short_description: stripHtml(item.short_description?.html),
     description: stripHtml(item.description?.html),
     categories: (item.categories ?? []).map((c) => c.name).filter(Boolean),

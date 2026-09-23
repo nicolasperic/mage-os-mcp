@@ -45,7 +45,9 @@ export async function requestPlaceOrder(
 ) {
   const ctx = await deps.sessions.resolveWithScope(args.session_id, "purchase.execute");
   const cart = await deps.loadCart(ctx, args.cart_id);
-  const digest = snapshotDigest(cart);
+  // The location is part of the confirmed terms — it selects catalog, price
+  // list and payment terms — so it is bound into the digest, not just the cart.
+  const digest = snapshotDigest({ ...cart, locationId: ctx.locationId });
 
   const op = await deps.operations.create({
     sessionId: ctx.sessionId,

@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadConfig } from "./config.js";
 import { createGraphQLClient } from "./magento/client.js";
+import { defaultPriceContext } from "./magento/price.js";
 import { searchProducts, searchProductsSchema } from "./tools/searchProducts.js";
 import { getProduct, getProductSchema } from "./tools/getProduct.js";
 import { checkStock, checkStockSchema } from "./tools/checkStock.js";
@@ -57,6 +58,13 @@ async function main() {
   const config = loadConfig();
   const client = createGraphQLClient(config);
 
+  // The pricing context every catalog read is resolved under. These tools are
+  // unauthenticated, so the view is consumer pricing; the tax treatment is
+  // whatever the deployment declared (MAGENTO_TAX_MODE), else "unknown". Once a
+  // company-scoped session backs a read, the view becomes company pricing and
+  // the catalog / location it resolved against get filled in.
+  const priceCtx = defaultPriceContext(config.taxMode);
+
   const server = new McpServer({
     name: "mage-os-mcp",
     version: "0.1.0",
@@ -97,7 +105,7 @@ async function main() {
       inputSchema: searchProductsSchema,
     },
     async (args) => {
-      const result = await searchProducts(client, args);
+      const result = await searchProducts(client, args, priceCtx);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -114,7 +122,7 @@ async function main() {
       inputSchema: getProductSchema,
     },
     async (args) => {
-      const result = await getProduct(client, args);
+      const result = await getProduct(client, args, priceCtx);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -169,7 +177,7 @@ async function main() {
       inputSchema: getCategoryProductsSchema,
     },
     async (args) => {
-      const result = await getCategoryProducts(client, args);
+      const result = await getCategoryProducts(client, args, priceCtx);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

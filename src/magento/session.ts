@@ -26,6 +26,7 @@ export async function storeToken(token: string): Promise<string> {
     customerId: 0,
     companyId: null,
     roleId: null,
+    locationId: null,
     scopes: [...DEV_DEFAULT_SCOPES],
     token,
     expiresAt: Date.now() + LEGACY_TTL_MS,

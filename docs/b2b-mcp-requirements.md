@@ -27,7 +27,7 @@ live) · ⬜ missing.
 | 6 | **Retrieve the outcome after a timeout** | 🔩 | `branch` — `getOperationStatus` | A timed-out agent re-polls by `operation_id` and gets the settled result (or `pending`) — never blindly re-orders. |
 | 7 | **Business permissions remain in Mage-OS** | 🟡 | `scopes.ts`, `governance/` | Access control is now **centrally enforced**: each authenticated tool declares a required scope and the governance wrapper checks it before the tool runs (denials audited). Scopes are meant to mirror the member's Mage-OS permissions; today the dev login grants read-tier defaults, and **deriving scopes from real Mage-OS company permissions** is the piece pending the authorization server. |
 | 10 | **Audit / governance** (adoption requirement — access control + audit trail) | ✅ | `governance/` | Every tool call emits a redacted, append-only audit record (actor / tool / outcome / timing / correlation id) via a pluggable sink, with optional tamper-evidence (hash chain). Centralized per-tool scope enforcement. Cross-cutting, not B2B-only. |
-| 11 | **Price context is explicit** (raised in discussion, not in the RFC) | ⬜ | — | Tools return a bare `final_price`. An agent cannot tell tax-inclusive consumer pricing from tax-exclusive company pricing, and we surface **no quantity price breaks** at all. Needs a price envelope (`amount`/`currency`/`tax_mode`/`price_view`/`catalog`/`location`) + settable `price_view`. See [feedback §2](b2b-community-feedback.md). |
+| 11 | **Price context is explicit** (raised in discussion, not in the RFC) | 🟡 | `magento/price.ts` | Done: every monetary value is a `Money` envelope (`amount`/`currency`/`tax_mode`/`price_view`/`catalog_id`/`location_id`), and **quantity price breaks** are surfaced on `get_product`, `search_products` and `get_category_products` via native `price_tiers`. `tax_mode` comes from `MAGENTO_TAX_MODE` and reports `unknown` when undeclared. Remaining: `price_view` is currently *reported*, not *settable* — a real consumer/company toggle needs store-side price-book selection (RFC-level). See [feedback §2](b2b-community-feedback.md). |
 | 8 | MCP is an **adapter to the same operations** (no privileged backdoor) | ✅ | design | Tools call the storefront GraphQL operations; no admin/integration credential path. Holds by construction. |
 | 9 | **Code & runtime review** of this repo | ✅ | `main` — [`b2b-reuse-review.md`](b2b-reuse-review.md) | Adopt / adapt / replace assessment delivered. |
 
@@ -90,3 +90,13 @@ Deliberate, documented trade-offs — not oversights:
   couples to the MCP SDK's registration surface; revisit on a major SDK bump.
 - **Stores are in-memory by default.** The `Repository` port makes a shared
   backend (Redis/DB) a drop-in; shipping one is deployment-specific work.
+- **`price_view` is reported, not settable.** Every price says which audience it
+  represents, but the consumer/company toggle Paul Hachmang describes needs
+  store-side price-book selection; we label honestly rather than expose a
+  parameter that silently does nothing.
+- **`tax_mode` is declared, not detected.** Magento's storefront GraphQL does not
+  expose the tax display setting, so it comes from `MAGENTO_TAX_MODE` and is
+  `"unknown"` until a deployment sets it.
+- **`locationId` is always null.** No upstream store models company locations
+  yet. The field is carried through the context and the confirmation digest so
+  neither has to change shape when one does.
