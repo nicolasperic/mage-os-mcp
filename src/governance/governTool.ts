@@ -53,6 +53,11 @@ export interface GovernanceOptions {
 
 type ToolHandler = (args: any, extra?: any) => Promise<any>;
 
+/** Cap an error message so a long/echoed downstream error can't bloat the log. */
+function truncate(s: string, max = 300): string {
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
 /** Wrap one tool handler with audit + timing + actor resolution + scope check. */
 export function governTool(
   tool: string,
@@ -75,6 +80,19 @@ export function governTool(
       input: redactArgs(args ?? {}),
     };
 
+    // Record exactly one audit event, and never let an audit-sink failure change
+    // the tool's outcome: a sink error is reported to stderr, not thrown. (For a
+    // stricter policy a deployment can wrap its sink to fail closed.)
+    const audit = async (event: AuditEvent) => {
+      try {
+        await opts.sink.record(event);
+      } catch (sinkErr: any) {
+        process.stderr.write(
+          `${JSON.stringify({ audit_error: `${sinkErr?.name}: ${sinkErr?.message}`, tool, correlationId })}\n`,
+        );
+      }
+    };
+
     try {
       // Centralized access control: enforce the tool's required scope before it
       // runs. Throwing here means the denial is recorded by the catch below.
@@ -82,17 +100,13 @@ export function governTool(
         await sessionStore().resolveWithScope(args?.session_id, requiredScope);
       }
       const result = await handler(args, extra);
-      await opts.sink.record({
-        ...base,
-        outcome: "ok",
-        durationMs: Date.now() - start,
-      } as AuditEvent);
+      await audit({ ...base, outcome: "ok", durationMs: Date.now() - start } as AuditEvent);
       return result;
     } catch (error: any) {
-      await opts.sink.record({
+      await audit({
         ...base,
         outcome: "error",
-        error: `${error?.name ?? "Error"}: ${error?.message ?? ""}`.trim(),
+        error: truncate(`${error?.name ?? "Error"}: ${error?.message ?? ""}`.trim()),
         durationMs: Date.now() - start,
       } as AuditEvent);
       throw error;

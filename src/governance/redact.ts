@@ -9,22 +9,29 @@ const SENSITIVE_KEY =
 
 const MAX_STRING = 200;
 
+/** Cap on nesting we'll walk — deeper structures are truncated, not followed,
+ *  so crafted deeply-nested tool input can't overflow the stack. */
+const MAX_DEPTH = 12;
+
 export function redactArgs(value: unknown): Record<string, unknown> {
-  const walked = walk(value);
+  const walked = walk(value, 0);
   // The top-level of tool args is always an object; normalize for the type.
   return walked && typeof walked === "object" && !Array.isArray(walked)
     ? (walked as Record<string, unknown>)
     : { value: walked };
 }
 
-function walk(value: unknown): unknown {
+function walk(value: unknown, depth: number): unknown {
+  if (depth >= MAX_DEPTH) {
+    return "[max depth]";
+  }
   if (Array.isArray(value)) {
-    return value.map(walk);
+    return value.map((v) => walk(v, depth + 1));
   }
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = SENSITIVE_KEY.test(key) ? "***" : walk(v);
+      out[key] = SENSITIVE_KEY.test(key) ? "***" : walk(v, depth + 1);
     }
     return out;
   }

@@ -81,6 +81,20 @@ describe("place-order confirmation handoff", () => {
     expect(executeOrder).toHaveBeenCalledTimes(1);
   });
 
+  it("two concurrent polls after confirmation place the order exactly once", async () => {
+    const { deps, operations, sessionId, executeOrder } = await harness();
+    const req = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });
+    await operations.markConfirmed(req.operation_id, snapshotDigest(CART));
+
+    // Fire two polls at once — the atomic claim must let only one execute.
+    const [a, b] = await Promise.all([
+      getOperationStatus(deps, { session_id: sessionId, operation_id: req.operation_id }),
+      getOperationStatus(deps, { session_id: sessionId, operation_id: req.operation_id }),
+    ]);
+    expect(executeOrder).toHaveBeenCalledTimes(1);
+    expect([a.status, b.status]).toContain("executed");
+  });
+
   it("a replayed idempotency key returns the same operation, not a new order", async () => {
     const { deps, operations, sessionId, executeOrder } = await harness();
     const first = await requestPlaceOrder(deps, { session_id: sessionId, cart_id: "cart1", idempotency_key: "k1" });

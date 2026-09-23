@@ -173,3 +173,21 @@ describe("centralized scope enforcement", () => {
     expect(sink.events[0].outcome).toBe("ok");
   });
 });
+
+describe("governance robustness", () => {
+  it("a failing audit sink does not change the tool outcome", async () => {
+    const throwingSink = { record: async () => { throw new Error("disk full"); } };
+    const wrapped = governTool("search_products", async () => ({ hits: 1 }), { sink: throwingSink as any });
+    // The tool result must still come back even though the sink blew up.
+    await expect(wrapped({ search: "bag" })).resolves.toEqual({ hits: 1 });
+  });
+
+  it("redactArgs caps deep nesting instead of overflowing", () => {
+    let deep: any = {};
+    let cur = deep;
+    for (let i = 0; i < 5000; i++) { cur.n = {}; cur = cur.n; }
+    // Should return without throwing (depth-capped).
+    const out = redactArgs(deep);
+    expect(JSON.stringify(out)).toContain("[max depth]");
+  });
+});

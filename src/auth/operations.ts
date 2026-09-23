@@ -20,6 +20,7 @@ import { InMemoryRepository, type Repository } from "./persistence.js";
 export type OperationStatus =
   | "pending_confirmation"
   | "confirmed"
+  | "executing"
   | "executed"
   | "rejected"
   | "expired";
@@ -144,8 +145,31 @@ export class OperationStore {
   }
 
   /**
+   * Atomically claim a confirmed operation for execution: transition
+   * `confirmed → executing` and return true only for the caller that won. A
+   * concurrent poll then sees `executing` and gets false, so the actual order
+   * is placed by exactly one caller — closing the check-then-act race in the
+   * place-order flow.
+   *
+   * In this in-memory store the read-modify-write runs to completion before any
+   * await yields, so it's atomic here. An external backend MUST implement this
+   * as a conditional write (e.g. `UPDATE … SET status='executing' WHERE
+   * status='confirmed'`) for the same guarantee.
+   */
+  async claimForExecution(operationId: string, now = Date.now()): Promise<boolean> {
+    const op = await this.get(operationId, now);
+    if (op.status !== "confirmed") {
+      return false;
+    }
+    op.status = "executing";
+    await this.ops.set(op.operationId, op);
+    return true;
+  }
+
+  /**
    * Mark executed and attach the result. Idempotent: a second call returns the
-   * already-recorded result rather than allowing a second execution.
+   * already-recorded result rather than allowing a second execution. Only an
+   * operation the caller has claimed (`executing`) can be completed.
    */
   async markExecuted(
     operationId: string,
@@ -156,15 +180,24 @@ export class OperationStore {
     if (op.status === "executed") {
       return op;
     }
-    if (op.status !== "confirmed") {
+    if (op.status !== "executing") {
       throw new OperationError(
-        `Cannot execute an operation that is ${op.status}; it must be confirmed first.`,
+        `Cannot complete an operation that is ${op.status}; it must be claimed for execution first.`,
       );
     }
     op.status = "executed";
     op.result = result;
     await this.ops.set(op.operationId, op);
     return op;
+  }
+
+  /** Release a claim back to `confirmed` if execution failed, so it can retry. */
+  async releaseClaim(operationId: string, now = Date.now()): Promise<void> {
+    const op = await this.get(operationId, now);
+    if (op.status === "executing") {
+      op.status = "confirmed";
+      await this.ops.set(op.operationId, op);
+    }
   }
 
   async size(): Promise<number> {

@@ -105,11 +105,23 @@ export async function getOperationStatus(
     throw new OperationError("Unknown operation id.");
   }
 
-  // Confirmed but not yet executed → execute now, once.
+  // Confirmed but not yet executed → execute now, exactly once. Claiming the
+  // operation (confirmed → executing) is atomic, so a concurrent poll can't also
+  // place the order; the loser simply reports current status.
   if (op.status === "confirmed") {
-    const cartId = String(op.payload.cartId);
-    const result = await deps.executeOrder(ctx, cartId);
-    await deps.operations.markExecuted(op.operationId, result, now);
+    const claimed = await deps.operations.claimForExecution(op.operationId, now);
+    if (claimed) {
+      const cartId = String(op.payload.cartId);
+      try {
+        const result = await deps.executeOrder(ctx, cartId);
+        await deps.operations.markExecuted(op.operationId, result, now);
+      } catch (err) {
+        // Execution failed before an order was recorded → release the claim so a
+        // later poll can retry rather than the operation being stuck executing.
+        await deps.operations.releaseClaim(op.operationId, now);
+        throw err;
+      }
+    }
   }
 
   const settled = await deps.operations.get(op.operationId, now);
