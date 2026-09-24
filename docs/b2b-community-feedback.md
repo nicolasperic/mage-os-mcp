@@ -43,6 +43,11 @@ merely a delivery detail — it changes what the order costs.
   `(contact, location)` rather than from a bare role. This also de-risks open
   item #6 in the tracker: the *shape* of "derive scopes from Mage-OS
   permissions" is now known even though the authorization server isn't.
+- **A concrete GraphQL schema for this triple** is drafted in
+  [`b2b-graphql-schema-proposal.md`](b2b-graphql-schema-proposal.md) — Company /
+  CompanyLocation / CompanyContact / role assignment as Mage-OS storefront SDL,
+  with an exists-vs-net-new mapping. It's the store-side contribution that makes
+  `locationId` real.
 - Decide how a location gets picked. A contact at three locations gives the
   agent an ambiguous "act as who?" — our proposal: the session binds a default
   location, tools may override it per call.
