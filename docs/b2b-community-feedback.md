@@ -1,17 +1,14 @@
 # Community feedback → what it changes for the MCP adapter
 
-Working notes on the Mage-OS B2B RFC discussion (Shopify/commercetools modelling
-from **paales**, operations + pricing + MultiCart from **Paul Hachmang**,
-prioritisation from **Gregor Pollak**), read specifically for what it changes in
-*this* server. Companion to [`b2b-mcp-requirements.md`](b2b-mcp-requirements.md)
-(the RFC tracker) and [`b2b-auth-model.md`](b2b-auth-model.md) (our entity model).
+Working notes on the Mage-OS B2B RFC discussion — Shopify/commercetools
+modelling, pricing and MultiCart from **Paul Hachmang** (**paales**, of
+GraphCommerce), prioritisation from **Gregor Pollak** — read specifically for
+what it changes in *this* server. Companion to
+[`b2b-mcp-requirements.md`](b2b-mcp-requirements.md) (the RFC tracker) and
+[`b2b-auth-model.md`](b2b-auth-model.md) (our entity model).
 
 Five findings, roughly in order of how much they cost to retrofit later.
-
-> **Attribution to confirm.** §5 (and its GraphCommerce_MultiCart reference)
-> suggests **paales is Paul Hachmang** of GraphCommerce — in which case §1's
-> modelling and §2/§4's pricing/MultiCart are the same contributor, not two.
-> Left as written until confirmed.
+(§1, §2, §4 and §5 are all Paul Hachmang / paales.)
 
 ---
 
