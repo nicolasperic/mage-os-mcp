@@ -6,7 +6,12 @@ prioritisation from **Gregor Pollak**), read specifically for what it changes in
 *this* server. Companion to [`b2b-mcp-requirements.md`](b2b-mcp-requirements.md)
 (the RFC tracker) and [`b2b-auth-model.md`](b2b-auth-model.md) (our entity model).
 
-Four findings, roughly in order of how much they cost to retrofit later.
+Five findings, roughly in order of how much they cost to retrofit later.
+
+> **Attribution to confirm.** §5 (and its GraphCommerce_MultiCart reference)
+> suggests **paales is Paul Hachmang** of GraphCommerce — in which case §1's
+> modelling and §2/§4's pricing/MultiCart are the same contributor, not two.
+> Left as written until confirmed.
 
 ---
 
@@ -155,6 +160,40 @@ above the realistic target rather than a speculative one.
 
 ---
 
+## 5. QuoteLike entities: RequisitionList and NegotiableQuote are one abstraction
+
+paales, extending the MultiCart thread (discussion #22): treat **QuoteLike**
+entities — a **RequisitionList** (a limited quote) and a **NegotiableQuote** (a
+quote with more features) — as *actual Quotes*. Then:
+
+- they **check out through the existing checkout flow** with minimal change
+  ("mainly permissions");
+- an **admin grid** can list them, with stored/default views to filter and pick
+  columns per implementation;
+- **developers define their own QuoteLike entities** without reinventing each
+  step.
+
+Already running in production as **GraphCommerce_MultiCart** (GraphQL-only today,
+but nothing inherent to that).
+
+### What we'd change
+
+- **Reinforces §4 — don't build per-entity tools.** A QuoteLike entity is a
+  cart/quote plus config; `can_become_real` means "this one is checkoutable",
+  i.e. the Execute tier applies. The generic surface from §4
+  (`list_carts` / `get_cart` / `modify_cart` / `move_items`) already fits, so a
+  new QuoteLike type needs **zero** MCP work.
+- **NegotiableQuote moves back up.** §4 put it last because the Adobe version
+  needs a fully custom checkout; reframed as a richer QuoteLike that checks out
+  through the normal flow, it's no longer a special case. The reserved
+  `quote.accept` scope is exactly the accept-a-quote permission.
+- **Sharpens the per-object permission gap.** "Mainly permissions" is *per
+  quote / per list*, but our governance enforces scope *per tool*. This is the
+  same new layer §4 flagged — one more reason to solve object-level permissions
+  generically rather than per entity.
+
+---
+
 ## Net effect on the tracker
 
 | Tracker item | Change |
@@ -163,7 +202,10 @@ above the realistic target rather than a speculative one.
 | #3 authenticated binding | Add `locationId` to the context; location into `snapshotDigest` |
 | #6 derive scopes from permissions | Shape now known: derive from `(contact, location)` |
 | Pricing (new) | Price envelope + `price_view` + quantity breaks — not currently tracked |
-| Negotiable quotes | Explicitly last |
+| Negotiable quotes | ~~Explicitly last~~ → reframed as a QuoteLike that checks out through the normal flow; no longer necessarily last (§5) |
+| QuoteLike surface (§5) | RequisitionList + NegotiableQuote + custom entities as one generic Quote surface; per-object permissions the open layer |
 
 The pricing row is the only genuinely *new* requirement this feedback surfaces;
-the rest sharpen or reprioritise items already in the tracker.
+the rest sharpen or reprioritise items already in the tracker. §5 unifies the
+list/quote entities under one abstraction and is the strongest signal yet that
+the adapter should expose a generic Quote/cart surface, not per-entity tools.
