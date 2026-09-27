@@ -40,6 +40,27 @@ confirmation `snapshotDigest` already carry a location (currently always null) �
 they were built location-shaped on purpose. This schema is the store-side piece
 that lets that field become real.
 
+### What a `CompanyLocation` is
+
+Sub-units of one company — branches, offices, warehouses, departments — as flat
+siblings (no location→location hierarchy):
+
+```
+Costello Industries                 (Company)
+├── New York HQ          — NET30, tax-exempt, catalog A
+├── Chicago Warehouse    — prepay, taxed,     catalog B
+└── Austin Retail Branch — NET15, taxed,      catalog A
+```
+
+Each location carries its own addresses, catalog/price list, payment terms and
+tax settings — so the *same cart of items* costs a different amount and settles on
+different terms depending on which location placed it. Locations relate only
+**through the shared company** (siblings) and **through shared contacts**: one
+contact can be assigned to several locations with a *different role at each*
+(admin in Chicago, buyer in New York). That `(contact, location) → role` binding
+is the whole point of the triple — "who am I, *where*, and therefore what may I do
+and at what price."
+
 ---
 
 ## SDL
@@ -165,6 +186,23 @@ type CompanyRoles {
 
 `Customer`, `CustomerAddress`, `Money` and `SearchResultPageInfo` are existing
 Magento storefront types — reused, not redefined.
+
+### Intentionally not in this slice
+
+Two types from the shared model are deliberately left out of the storefront triple
+— noted here so it's a considered choice, not an omission:
+
+- **`CompanyLocationStaffMemberAssignment` / `StaffMember`.** A `StaffMember` is a
+  **merchant-side** employee (the store's sales rep / account manager for a
+  location), not a company buyer. It belongs to the *admin* API, not a
+  buyer-facing storefront schema — exposing internal staff to shoppers would be a
+  data leak. Out of scope by design.
+- **`CompanyLocationsCondition` (markets / context resolution).** This is *how a
+  location context gets selected* ("switch into private company mode"), not part
+  of the company entity. In Magento terms it's closer to website/store scope +
+  customer-group resolution. It belongs with the pricing/catalog slice and open
+  question #2 ("where a location's catalog attaches / how a location is picked"),
+  not the entity triple.
 
 ---
 
