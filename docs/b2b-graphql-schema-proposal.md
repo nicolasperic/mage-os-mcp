@@ -64,6 +64,9 @@ type Company {
 
 type CompanyContact {
   id: ID!
+  # Back-reference to the owning company (matches Shopify's model; keeps the
+  # graph navigable from a contact reached in isolation).
+  company: Company!
   # Reuse the existing storefront Customer type rather than re-describing a person.
   customer: Customer!
   is_main_contact: Boolean!
@@ -75,6 +78,9 @@ type CompanyContact {
 # NET-NEW upstream. The core of the proposal.
 type CompanyLocation {
   uid: ID!
+  # Back-reference to the owning company, so the graph is navigable from a
+  # location held in isolation (e.g. reached via an order's purchasing entity).
+  company: Company!
   name: String!
   phone: String
   billing_addresses: [CustomerAddress!]!
@@ -93,6 +99,7 @@ type CompanyContactRole {
 
 # Binds the triple together: this contact, at this location, has this role.
 type CompanyContactRoleAssignment {
+  company: Company!
   role: CompanyContactRole!
   contact: CompanyContact!
   # Null on a store that does not model locations (see "graceful degradation").
@@ -192,6 +199,11 @@ Magento storefront types — reused, not redefined.
   practice. This keeps every consumer (frontend and MCP) on one code path.
 - **Roles stay free-form strings**, per Shopify's note (`admin` / `buyer` are
   conventions, not an enum), so a store can define its own.
+- **Back-references are kept** (`CompanyContact.company`,
+  `CompanyLocation.company`, `CompanyContactRoleAssignment.company`), matching the
+  shared model. The graph is entered top-down via `company { … }`, but a node
+  reached in isolation — e.g. a `CompanyLocation` off an order's
+  `PurchasingCompany` — still resolves back to its company without re-querying.
 - **`uid` for the net-new `CompanyLocation`**, `id` for the entities that already
   exist with integer ids (`Company`, `CompanyContactRole`) — consistency with
   current Adobe B2B rather than a big-bang id migration (open question).
